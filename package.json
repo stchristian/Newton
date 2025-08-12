@@ -21,10 +21,14 @@
     "build:linux": "electron-vite build && electron-builder --linux"
   },
   "dependencies": {
+    "@codemirror/lang-markdown": "^6.3.4",
+    "@codemirror/language": "^6.11.2",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.38.1",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@tailwindcss/vite": "^4.1.11",
-    "marked": "^16.1.2",
+    "codemirror": "^6.0.2",
     "tailwindcss": "^4.1.11"
   },
   "devDependencies": {
