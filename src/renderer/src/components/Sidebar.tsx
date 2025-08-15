@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { Button } from './ui/button'
 
 interface FileSystemItem {
   name: string
@@ -94,12 +95,9 @@ const Sidebar: React.FC<SidebarProps> = ({
     <aside className="border-r border-gray-200 w-[250px] flex flex-col">
       {/* Open Folder Button */}
       <div className="p-4 border-b border-gray-200">
-        <button
-          onClick={handleOpenWorkspace}
-          className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-        >
+        <Button onClick={handleOpenWorkspace} size={'lg'}>
           Open Workspace
-        </button>
+        </Button>
       </div>
 
       {/* Current Folder Path */}

@@ -5,6 +5,7 @@ import { basicSetup } from 'codemirror'
 import { markdown as cmMarkdown } from '@codemirror/lang-markdown'
 import { syntaxHighlighting, HighlightStyle } from '@codemirror/language'
 import { tags } from '@lezer/highlight'
+import { Button } from './ui/button'
 
 interface MarkdownViewerProps {
   value: string
@@ -141,11 +142,9 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({ value, onSave }) => {
   }, [value])
 
   return (
-    <div className="flex flex-col w-full">
+    <div className="flex flex-col w-3xl mx-auto">
       <div>
-        <button style={{ marginLeft: 8 }} onClick={() => onSave && onSave(markdown)}>
-          Save
-        </button>
+        <Button onClick={() => onSave && onSave(markdown)}>Save</Button>
       </div>
       <div
         ref={editorContainerRef}
