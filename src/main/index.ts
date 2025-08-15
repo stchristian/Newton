@@ -129,6 +129,20 @@ app.whenReady().then(() => {
     }
   })
 
+  ipcMain.handle(
+    'create-file',
+    async (_, folderPath: string, fileName: string, content: string) => {
+      try {
+        const filePath = join(folderPath, fileName)
+        await writeFile(filePath, content, 'utf-8')
+        return filePath
+      } catch (error) {
+        console.error('Error creating file:', error)
+        throw error
+      }
+    }
+  )
+
   ipcMain.on('show-context-menu', (event) => {
     const template = [
       {

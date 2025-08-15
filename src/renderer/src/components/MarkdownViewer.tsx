@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
 import { EditorState } from '@codemirror/state'
 import { EditorView, Decoration, ViewPlugin, DecorationSet, ViewUpdate } from '@codemirror/view'
 import { markdown as cmMarkdown } from '@codemirror/lang-markdown'
@@ -9,7 +9,12 @@ import { config } from './EditorConfig'
 
 interface MarkdownViewerProps {
   value: string
+  fileName?: string
   onSave?: (markdown: string) => void
+}
+
+export interface MarkdownViewerRef {
+  focus: () => void
 }
 
 // Live preview styles similar to Obsidian: larger, bold headings; bold/italic emphasis
@@ -84,77 +89,96 @@ const hideFormatting = ViewPlugin.fromClass(
   { decorations: (v: { decorations: DecorationSet }) => v.decorations }
 )
 
-const MarkdownViewer: React.FC<MarkdownViewerProps> = ({ value, onSave }) => {
-  const [markdown, setMarkdown] = useState(value)
+const MarkdownViewer = forwardRef<MarkdownViewerRef, MarkdownViewerProps>(
+  ({ value, fileName, onSave }, ref) => {
+    const [markdown, setMarkdown] = useState(value)
 
-  const editorContainerRef = useRef<HTMLDivElement | null>(null)
-  const editorViewRef = useRef<EditorView | null>(null)
+    const editorContainerRef = useRef<HTMLDivElement | null>(null)
+    const editorViewRef = useRef<EditorView | null>(null)
 
-  // Update markdown if value prop changes
-  React.useEffect(() => {
-    setMarkdown(value)
-  }, [value])
+    // Expose focus method to parent component
+    useImperativeHandle(ref, () => ({
+      focus: () => {
+        if (editorViewRef.current) {
+          editorViewRef.current.focus()
+        }
+      }
+    }))
 
-  // Initialize CodeMirror and sync with external value
-  useEffect(() => {
-    if (editorContainerRef.current && !editorViewRef.current) {
-      const state = EditorState.create({
-        doc: value,
-        extensions: [
-          config,
-          cmMarkdown(),
-          EditorView.lineWrapping,
-          syntaxHighlighting(livePreviewStyle),
-          // hideFormatting,
-          EditorView.updateListener.of((update) => {
-            if (update.docChanged) {
-              const nextValue = update.state.doc.toString()
-              setMarkdown(nextValue)
-            }
-          })
-        ]
-      })
+    // Update markdown if value prop changes
+    React.useEffect(() => {
+      setMarkdown(value)
+    }, [value])
 
-      editorViewRef.current = new EditorView({
-        state,
-        parent: editorContainerRef.current
-      })
-    }
+    // Initialize CodeMirror and sync with external value
+    useEffect(() => {
+      if (editorContainerRef.current && !editorViewRef.current) {
+        const state = EditorState.create({
+          doc: value,
+          extensions: [
+            config,
+            cmMarkdown(),
+            EditorView.lineWrapping,
+            syntaxHighlighting(livePreviewStyle),
+            // hideFormatting,
+            EditorView.updateListener.of((update) => {
+              if (update.docChanged) {
+                const nextValue = update.state.doc.toString()
+                setMarkdown(nextValue)
+              }
+            })
+          ]
+        })
 
-    // Keep editor in sync with external `value`
-    if (editorViewRef.current && typeof value === 'string') {
-      const view = editorViewRef.current
-      const current = view.state.doc.toString()
-      if (current !== value) {
-        view.dispatch({
-          changes: { from: 0, to: view.state.doc.length, insert: value }
+        editorViewRef.current = new EditorView({
+          state,
+          parent: editorContainerRef.current
         })
       }
-    }
 
-    return () => {
-      // Always destroy on cleanup to avoid leaks
-      if (editorViewRef.current) {
-        editorViewRef.current.destroy()
-        editorViewRef.current = null
+      // Keep editor in sync with external `value`
+      if (editorViewRef.current && typeof value === 'string') {
+        const view = editorViewRef.current
+        const current = view.state.doc.toString()
+        if (current !== value) {
+          view.dispatch({
+            changes: { from: 0, to: view.state.doc.length, insert: value }
+          })
+        }
       }
-    }
-  }, [value])
 
-  return (
-    <div className="flex flex-col w-3xl mx-auto">
-      <div>
-        <Button onClick={() => onSave && onSave(markdown)}>Save</Button>
+      return () => {
+        // Always destroy on cleanup to avoid leaks
+        if (editorViewRef.current) {
+          editorViewRef.current.destroy()
+          editorViewRef.current = null
+        }
+      }
+    }, [value])
+
+    return (
+      <div className="flex flex-col w-3xl mx-auto">
+        {/* File name display */}
+        {fileName && (
+          <div className="text-center py-2 border-b border-gray-200 bg-gray-50">
+            <span className="text-sm text-gray-600 font-medium">{fileName}</span>
+          </div>
+        )}
+        <div className="flex justify-between items-center p-4 border-b border-gray-200">
+          <Button onClick={() => onSave && onSave(markdown)}>Save</Button>
+        </div>
+        <div
+          ref={editorContainerRef}
+          style={{
+            padding: 0,
+            minHeight: 300
+          }}
+        />
       </div>
-      <div
-        ref={editorContainerRef}
-        style={{
-          padding: 0,
-          minHeight: 300
-        }}
-      />
-    </div>
-  )
-}
+    )
+  }
+)
+
+MarkdownViewer.displayName = 'MarkdownViewer'
 
 export default MarkdownViewer

@@ -8,6 +8,8 @@ const api = {
   readFile: (filePath: string) => ipcRenderer.invoke('read-file', filePath),
   writeFile: (filePath: string, content: string) =>
     ipcRenderer.invoke('write-file', filePath, content),
+  createFile: (folderPath: string, fileName: string, content: string) =>
+    ipcRenderer.invoke('create-file', folderPath, fileName, content),
   contextMenu: {
     show: () => ipcRenderer.send('show-context-menu'),
     onCommand: (cb: (cmd: string) => void) =>

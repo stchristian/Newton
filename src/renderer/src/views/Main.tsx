@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import MarkdownViewer from '../components/MarkdownViewer'
+import React, { useState, useRef, useEffect } from 'react'
+import MarkdownViewer, { MarkdownViewerRef } from '../components/MarkdownViewer'
 import Sidebar from '../components/Sidebar'
 
 interface Document {
@@ -14,6 +14,25 @@ export default function Main(): React.ReactElement {
 
   // Workspace folder selected by the user
   const [workspaceFolder, setWorkspaceFolder] = useState<string | null>(null)
+
+  // Ref to focus the editor
+  const editorRef = useRef<MarkdownViewerRef>(null)
+
+  // Initialize workspace on component mount for web version
+  useEffect(() => {
+    const initializeWorkspace = async () => {
+      if (!workspaceFolder) {
+        try {
+          const folder = await window.api.openFolder()
+          setWorkspaceFolder(folder)
+        } catch (error) {
+          console.error('Failed to initialize workspace:', error)
+        }
+      }
+    }
+
+    initializeWorkspace()
+  }, [workspaceFolder])
 
   // Track the current document by id for easier updates
 
@@ -38,6 +57,11 @@ export default function Main(): React.ReactElement {
         const content = await window.api.readFile(path)
         const name = path.split('/').pop() ?? path
         setActiveDocument({ id: Date.now(), name, markdownContent: content, path })
+
+        // Focus the editor after a short delay to ensure it's rendered
+        setTimeout(() => {
+          editorRef.current?.focus()
+        }, 100)
       } catch (error) {
         console.error('Failed to open markdown file:', error)
       }
@@ -50,9 +74,15 @@ export default function Main(): React.ReactElement {
         workspaceFolder={workspaceFolder}
         onChangeWorkspaceFolder={setWorkspaceFolder}
         onDocumentClick={handleDocumentClick}
+        activeFilePath={activeDocument?.path}
       />
       {activeDocument && (
-        <MarkdownViewer value={activeDocument.markdownContent} onSave={handleSave} />
+        <MarkdownViewer
+          ref={editorRef}
+          value={activeDocument.markdownContent}
+          fileName={activeDocument.name}
+          onSave={handleSave}
+        />
       )}
     </div>
   )

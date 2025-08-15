@@ -12,6 +12,7 @@ interface FileSystemAPI {
   readDirectory: (folderPath: string) => Promise<FileSystemItem[]>
   readFile: (filePath: string) => Promise<string>
   writeFile: (filePath: string, content: string) => Promise<boolean>
+  createFile: (folderPath: string, fileName: string, content: string) => Promise<string>
   contextMenu: {
     show: () => void
     onCommand: (cb: (cmd: string) => void) => void
