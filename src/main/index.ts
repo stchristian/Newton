@@ -1,10 +1,29 @@
-import { app, shell, BrowserWindow, ipcMain, screen, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, screen, dialog, Menu } from 'electron'
 import { join } from 'path'
 import { readdir, stat, readFile, writeFile } from 'fs/promises'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 
 function createWindow(): void {
+  const template = [
+    {
+      label: 'View',
+      submenu: [
+        {
+          label: 'Toggle Developer Tools',
+          accelerator: 'CmdOrCtrl+Alt+I',
+          click: () => {
+            mainWindow.webContents.openDevTools({
+              mode: 'right'
+            })
+          }
+        }
+      ]
+    }
+  ]
+
+  const menu = Menu.buildFromTemplate(template)
+  Menu.setApplicationMenu(menu)
   // Create the browser window with size equal to the screen size.
   const primaryDisplay = screen.getPrimaryDisplay()
   const { width, height } = primaryDisplay.workAreaSize
@@ -108,6 +127,28 @@ app.whenReady().then(() => {
       console.error('Error writing file:', error)
       throw error
     }
+  })
+
+  ipcMain.on('show-context-menu', (event) => {
+    const template = [
+      {
+        label: 'New',
+        accelerator: 'CmdOrCtrl+N',
+        click: () => event.sender.send('context-menu-command', 'new')
+      },
+      {
+        label: 'Open…',
+        accelerator: 'CmdOrCtrl+O',
+        click: () => event.sender.send('context-menu-command', 'open')
+      },
+      {
+        label: 'Save',
+        accelerator: 'CmdOrCtrl+S',
+        click: () => event.sender.send('context-menu-command', 'save')
+      }
+    ]
+    const menu = Menu.buildFromTemplate(template)
+    menu.popup()
   })
 
   createWindow()

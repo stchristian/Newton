@@ -7,7 +7,15 @@ const api = {
   readDirectory: (folderPath: string) => ipcRenderer.invoke('read-directory', folderPath),
   readFile: (filePath: string) => ipcRenderer.invoke('read-file', filePath),
   writeFile: (filePath: string, content: string) =>
-    ipcRenderer.invoke('write-file', filePath, content)
+    ipcRenderer.invoke('write-file', filePath, content),
+  contextMenu: {
+    show: () => ipcRenderer.send('show-context-menu'),
+    onCommand: (cb: (cmd: string) => void) =>
+      ipcRenderer.on('context-menu-command', (_e, cmd) => cb(cmd)),
+    removeListener: (cb: (cmd: string) => void) => {
+      ipcRenderer.removeListener('context-menu-command', (_e, cmd) => cb(cmd))
+    }
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

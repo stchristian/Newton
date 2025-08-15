@@ -92,7 +92,12 @@ const Sidebar: React.FC<SidebarProps> = ({
   )
 
   return (
-    <aside className="border-r border-gray-200 w-[250px] flex flex-col">
+    <aside
+      className="border-r border-gray-200 w-[250px] flex flex-col"
+      onContextMenu={() => {
+        window.api.contextMenu.show()
+      }}
+    >
       {/* Open Folder Button */}
       <div className="p-4 border-b border-gray-200">
         <Button onClick={handleOpenWorkspace} size={'lg'}>
