@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { EditorState } from '@codemirror/state'
 import { EditorView, Decoration, ViewPlugin, DecorationSet, ViewUpdate } from '@codemirror/view'
-import { basicSetup } from 'codemirror'
 import { markdown as cmMarkdown } from '@codemirror/lang-markdown'
 import { syntaxHighlighting, HighlightStyle } from '@codemirror/language'
 import { tags } from '@lezer/highlight'
 import { Button } from './ui/button'
+import { config } from './EditorConfig'
 
 interface MarkdownViewerProps {
   value: string
@@ -101,7 +101,7 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({ value, onSave }) => {
       const state = EditorState.create({
         doc: value,
         extensions: [
-          basicSetup,
+          config,
           cmMarkdown(),
           EditorView.lineWrapping,
           syntaxHighlighting(livePreviewStyle),
