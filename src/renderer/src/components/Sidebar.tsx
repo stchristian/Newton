@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react'
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import { Button } from './ui/button'
-import { Folder, Plus } from 'lucide-react'
+import { Folder, Plus, StickyNote } from 'lucide-react'
 
 interface FileSystemItem {
   name: string
@@ -28,9 +28,18 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [folderHistory, setFolderHistory] = useState<string[]>([])
 
   // File creation state
-  const [isCreatingFile, setIsCreatingFile] = useState(false)
-  const [newFileName, setNewFileName] = useState('')
+  const [newItemType, setNewItemType] = useState<'note' | 'folder'>('note')
+  const [isAddingNewItem, setIsAddingNewItem] = useState(false)
+  const [newItemName, setNewItemname] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const refresh = useCallback(async () => {
+    // Refresh the folder contents
+    if (workspaceFolder) {
+      const items = await window.api.readDirectory(workspaceFolder)
+      setFolderItems(items)
+    }
+  }, [workspaceFolder])
 
   // Reset navigation and load contents when the workspace folder changes
   useEffect((): void => {
@@ -50,8 +59,23 @@ const Sidebar: React.FC<SidebarProps> = ({
         console.error('Error reading workspace folder:', error)
       }
     }
+    window.api.contextMenu.onCommand(async (cmd, path) => {
+      switch (cmd) {
+        case 'create-folder':
+          console.log(cmd)
+          setNewItemType('folder')
+          setIsAddingNewItem(true)
+          setNewItemname('')
+          break
+        case 'remove':
+          await window.api.deleteFile(path)
+          refresh()
+          break
+      }
+    })
+
     void initializeWorkspace()
-  }, [workspaceFolder])
+  }, [workspaceFolder, refresh])
 
   const handleOpenWorkspace = async (): Promise<void> => {
     try {
@@ -102,8 +126,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   const handleAddNote = async (): Promise<void> => {
     if (!workspaceFolder) return
 
-    setIsCreatingFile(true)
-    setNewFileName('')
+    setIsAddingNewItem(true)
+    setNewItemname('')
+    setNewItemType('note')
 
     // Focus the input after a short delay to ensure it's rendered
     setTimeout(() => {
@@ -111,43 +136,51 @@ const Sidebar: React.FC<SidebarProps> = ({
     }, 100)
   }
 
-  const handleCreateFile = async (): Promise<void> => {
-    if (!workspaceFolder || !newFileName.trim()) {
-      setIsCreatingFile(false)
+  const handleCreateNewItem = async (): Promise<void> => {
+    if (!workspaceFolder || !newItemName.trim()) {
+      setIsAddingNewItem(false)
       return
     }
 
     try {
       // Ensure the file has a .md extension
-      const fileName = newFileName.endsWith('.md') ? newFileName : `${newFileName}.md`
-      const content = `# ${fileName.replace('.md', '')}\n\n`
+      console.log(newItemName, newItemType)
+      if (newItemType === 'note') {
+        const fileName = newItemName.endsWith('.md') ? newItemName : `${newItemName}.md`
+        const content = `# ${fileName.replace('.md', '')}\n\n`
 
-      const filePath = await window.api.createFile(workspaceFolder, fileName, content)
+        const filePath = await window.api.createFile(workspaceFolder, fileName, content)
 
-      // Refresh the folder contents
-      const items = await window.api.readDirectory(workspaceFolder)
-      setFolderItems(items)
+        // Refresh the folder contents
+        const items = await window.api.readDirectory(workspaceFolder)
+        setFolderItems(items)
 
-      // Find the new file and open it
-      const newFile = items.find((item) => item.path === filePath)
-      if (newFile) {
-        onDocumentClick(filePath)
+        // Find the new file and open it
+        const newFile = items.find((item) => item.path === filePath)
+        if (newFile) {
+          onDocumentClick(filePath)
+        }
+      } else if (newItemType === 'folder') {
+        await window.api.createFolder(`${workspaceFolder}/${newItemName}`)
+        // Refresh the folder contents
+        const items = await window.api.readDirectory(workspaceFolder)
+        setFolderItems(items)
       }
 
-      setIsCreatingFile(false)
-      setNewFileName('')
+      setIsAddingNewItem(false)
+      setNewItemname('')
     } catch (error) {
       console.error('Error creating file:', error)
-      setIsCreatingFile(false)
+      setIsAddingNewItem(false)
     }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent): void => {
     if (e.key === 'Enter') {
-      void handleCreateFile()
+      void handleCreateNewItem()
     } else if (e.key === 'Escape') {
-      setIsCreatingFile(false)
-      setNewFileName('')
+      setIsAddingNewItem(false)
+      setNewItemname('')
     }
   }
 
@@ -171,23 +204,23 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* File Creation Input */}
-      {isCreatingFile && (
+      {isAddingNewItem && (
         <div className="p-4 border-b border-gray-200 bg-blue-50">
           <div className="flex flex-col gap-2">
             <input
               ref={inputRef}
               type="text"
-              value={newFileName}
-              onChange={(e) => setNewFileName(e.target.value)}
+              value={newItemName}
+              onChange={(e) => setNewItemname(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Enter file name..."
               className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             <div className="flex gap-2">
-              <Button size="sm" onClick={handleCreateFile} disabled={!newFileName.trim()}>
+              <Button size="sm" onClick={handleCreateNewItem} disabled={!newItemName.trim()}>
                 Create
               </Button>
-              <Button size="sm" variant="outline" onClick={() => setIsCreatingFile(false)}>
+              <Button size="sm" variant="outline" onClick={() => setIsAddingNewItem(false)}>
                 Cancel
               </Button>
             </div>
@@ -238,8 +271,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                   className={`p-2 hover:bg-gray-100 cursor-pointer flex items-center ${
                     activeFilePath === item.path ? 'bg-blue-50 border-r-2 border-blue-500' : ''
                   }`}
+                  onContextMenu={() => {
+                    window.api.contextMenu.show(item.path)
+                  }}
                 >
-                  <span className="mr-2">{item.isDirectory ? '📁' : '📄'}</span>
+                  <span className="mr-2">
+                    {item.isDirectory ? <Folder size={16} /> : <StickyNote size={16} />}
+                  </span>
                   <span
                     className={`truncate ${activeFilePath === item.path ? 'font-medium text-blue-700' : ''}`}
                   >

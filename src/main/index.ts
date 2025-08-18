@@ -1,6 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain, screen, dialog, Menu } from 'electron'
 import { join } from 'path'
-import { readdir, stat, readFile, writeFile } from 'fs/promises'
+import { readdir, stat, readFile, writeFile, mkdir, unlink } from 'fs/promises'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 
@@ -119,12 +119,32 @@ app.whenReady().then(() => {
     }
   })
 
+  ipcMain.handle('delete-file', async (_, filePath: string) => {
+    try {
+      await unlink(filePath)
+      return true
+    } catch (error) {
+      console.error('Error removing file:', error)
+      throw error
+    }
+  })
+
   ipcMain.handle('write-file', async (_, filePath: string, content: string) => {
     try {
       await writeFile(filePath, content, 'utf-8')
       return true
     } catch (error) {
       console.error('Error writing file:', error)
+      throw error
+    }
+  })
+
+  ipcMain.handle('create-folder', async (_, filePath: string) => {
+    try {
+      await mkdir(filePath)
+      return true
+    } catch (error) {
+      console.error('Error creating folder:', error)
       throw error
     }
   })
@@ -143,24 +163,47 @@ app.whenReady().then(() => {
     }
   )
 
-  ipcMain.on('show-context-menu', (event) => {
-    const template = [
-      {
-        label: 'New',
-        accelerator: 'CmdOrCtrl+N',
-        click: () => event.sender.send('context-menu-command', 'new')
-      },
-      {
-        label: 'Open…',
-        accelerator: 'CmdOrCtrl+O',
-        click: () => event.sender.send('context-menu-command', 'open')
-      },
-      {
-        label: 'Save',
-        accelerator: 'CmdOrCtrl+S',
-        click: () => event.sender.send('context-menu-command', 'save')
-      }
-    ]
+  ipcMain.on('show-context-menu', (event, path: string) => {
+    let template: Array<Electron.MenuItem | Electron.MenuItemConstructorOptions> = []
+    if (path) {
+      template = [
+        {
+          label: 'Rename',
+          click: () => event.sender.send('context-menu-command', 'rename')
+        },
+        {
+          label: 'Remove',
+          accelerator: 'CmdOrCtrl+S',
+          click: async () => {
+            event.sender.send('context-menu-command', 'remove', path)
+          }
+
+          //event.sender.send('context-menu-command', 'remove', )
+        }
+      ]
+    } else {
+      template = [
+        {
+          label: 'New',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => event.sender.send('context-menu-command', 'new')
+        },
+        {
+          label: 'New folder',
+          click: () => event.sender.send('context-menu-command', 'create-folder')
+        },
+        {
+          label: 'Open…',
+          accelerator: 'CmdOrCtrl+O',
+          click: () => event.sender.send('context-menu-command', 'open')
+        },
+        {
+          label: 'Save',
+          accelerator: 'CmdOrCtrl+S',
+          click: () => event.sender.send('context-menu-command', 'save')
+        }
+      ]
+    }
     const menu = Menu.buildFromTemplate(template)
     menu.popup()
   })

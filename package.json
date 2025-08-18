@@ -4,7 +4,6 @@
   "description": "An Electron application with React and TypeScript",
   "main": "./out/main/index.js",
   "author": "example.com",
-  "type": "module",
   "homepage": "https://electron-vite.org",
   "scripts": {
     "format": "prettier --write .",
@@ -20,9 +19,9 @@
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "electron-vite build && electron-builder --mac",
     "build:linux": "electron-vite build && electron-builder --linux",
-    "build:web": "vite build --config vite.web.config.ts",
-    "preview:web": "vite preview --config vite.web.config.ts",
-    "dev:web": "vite --config vite.web.config.ts"
+    "build:web": "vite build --config vite.web.config.mts",
+    "preview:web": "vite preview --config vite.web.config.mts",
+    "dev:web": "vite --config vite.web.config.mts"
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.3.4",

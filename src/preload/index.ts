@@ -1,8 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import { FileSystemAPI } from './types'
 
-// Custom APIs for renderer
-const api = {
+const api: FileSystemAPI = {
   openFolder: () => ipcRenderer.invoke('open-folder'),
   readDirectory: (folderPath: string) => ipcRenderer.invoke('read-directory', folderPath),
   readFile: (filePath: string) => ipcRenderer.invoke('read-file', filePath),
@@ -11,13 +11,12 @@ const api = {
   createFile: (folderPath: string, fileName: string, content: string) =>
     ipcRenderer.invoke('create-file', folderPath, fileName, content),
   contextMenu: {
-    show: () => ipcRenderer.send('show-context-menu'),
+    show: (path?: string) => ipcRenderer.send('show-context-menu', path),
     onCommand: (cb: (cmd: string) => void) =>
-      ipcRenderer.on('context-menu-command', (_e, cmd) => cb(cmd)),
-    removeListener: (cb: (cmd: string) => void) => {
-      ipcRenderer.removeListener('context-menu-command', (_e, cmd) => cb(cmd))
-    }
-  }
+      ipcRenderer.on('context-menu-command', (_e, cmd) => cb(cmd))
+  },
+  createFolder: (filePath: string) => ipcRenderer.invoke('create-folder', filePath),
+  deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

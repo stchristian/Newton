@@ -1,10 +1,4 @@
-// Web-compatible API that mimics Electron's file system APIs
-export interface FileSystemItem {
-  name: string
-  path: string
-  isDirectory: boolean
-  isFile: boolean
-}
+import { FileSystemAPI, FileSystemItem } from '../../../preload/types'
 
 export interface Document {
   id: string
@@ -14,7 +8,7 @@ export interface Document {
   lastModified: number
 }
 
-class WebAPI {
+class WebAPI implements FileSystemAPI {
   private documents: Map<string, Document> = new Map()
   private currentWorkspace: string | null = null
 
@@ -89,15 +83,17 @@ class WebAPI {
     throw new Error(`File not found: ${filePath}`)
   }
 
-  async writeFile(filePath: string, content: string): Promise<void> {
+  async writeFile(filePath: string, content: string) {
     const doc = this.documents.get(filePath)
     if (doc) {
       doc.content = content
       doc.lastModified = Date.now()
       this.documents.set(filePath, doc)
       this.saveToStorage()
+      return true
     } else {
       throw new Error(`File not found: ${filePath}`)
+      return false
     }
   }
 
@@ -120,7 +116,8 @@ class WebAPI {
     show: () => {
       // Web version - could implement custom context menu
       console.log('Context menu requested')
-    }
+    },
+    onCommand: () => {}
   }
 
   private addSampleDocuments(): void {
@@ -189,17 +186,7 @@ Happy writing!`
   }
 }
 
-// Create global web API
-export const webAPI = new WebAPI()
-
-// Mock window.api for web environment
-declare global {
-  interface Window {
-    api: typeof webAPI
-  }
-}
-
 // Expose the API globally for web
-if (typeof window !== 'undefined') {
-  window.api = webAPI
+if (typeof window.api === 'undefined') {
+  window.api = new WebAPI()
 }
