@@ -1,34 +1,27 @@
-# electron-app
+Electron-based note-taking app using shadcn/ui and React.
 
-An Electron application with React and TypeScript
+## V1 version needed features:
 
-## Recommended IDE Setup
+- basic file / document management features (add/remove/move files & directories around in the sidebar)
+- support only one note type: Markdown.
+- Markdown viewer: TBD
+- minimalistic simple ui with shadcn
+- support browser apis -> store workspace in local storage.
 
-- [VSCode](https://code.visualstudio.com/) + [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) + [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
+## Next
 
-## Project Setup
-
-### Install
-
-```bash
-$ npm install
-```
-
-### Development
-
-```bash
-$ npm run dev
-```
-
-### Build
-
-```bash
-# For windows
-$ npm run build:win
-
-# For macOS
-$ npm run build:mac
-
-# For Linux
-$ npm run build:linux
-```
+- Remote file storage.
+- Integrations (Calendar, gmail etc)
+- Integrated task / todo management
+- Integrated Habit tracker.
+- Links between notes.
+- A note editor better fit for coding ->
+  - ability to run javascript
+- Save / Reload active workspace
+- Readme / features that I want to implement.
+- Tab management
+- Focus mode ?!
+- Enforce an organisation system like in the book second brain
+- Introduce AI summaries, agent support 🤖
+- 💡 Finder like app with AI and note taking capabilites.
+- Translate/correct text (show diff with explanations) with AI
