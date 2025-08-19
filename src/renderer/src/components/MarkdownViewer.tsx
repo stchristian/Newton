@@ -171,7 +171,8 @@ const MarkdownViewer = forwardRef<MarkdownViewerRef, MarkdownViewerProps>(
           ref={editorContainerRef}
           style={{
             padding: 0,
-            minHeight: 300
+            minHeight: 300,
+            outline: 'none'
           }}
         />
       </div>

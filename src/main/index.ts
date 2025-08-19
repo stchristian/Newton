@@ -168,6 +168,16 @@ app.whenReady().then(() => {
     if (path) {
       template = [
         {
+          label: 'New',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => event.sender.send('context-menu-command', 'new')
+        },
+        {
+          label: 'New folder',
+          click: () => event.sender.send('context-menu-command', 'create-folder')
+        },
+        { type: 'separator' },
+        {
           label: 'Rename',
           click: () => event.sender.send('context-menu-command', 'rename')
         },
@@ -177,8 +187,6 @@ app.whenReady().then(() => {
           click: async () => {
             event.sender.send('context-menu-command', 'remove', path)
           }
-
-          //event.sender.send('context-menu-command', 'remove', )
         }
       ]
     } else {
@@ -191,16 +199,6 @@ app.whenReady().then(() => {
         {
           label: 'New folder',
           click: () => event.sender.send('context-menu-command', 'create-folder')
-        },
-        {
-          label: 'Open…',
-          accelerator: 'CmdOrCtrl+O',
-          click: () => event.sender.send('context-menu-command', 'open')
-        },
-        {
-          label: 'Save',
-          accelerator: 'CmdOrCtrl+S',
-          click: () => event.sender.send('context-menu-command', 'save')
         }
       ]
     }

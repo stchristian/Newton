@@ -19,20 +19,20 @@ export default function Main(): React.ReactElement {
   const editorRef = useRef<MarkdownViewerRef>(null)
 
   // Initialize workspace on component mount for web version
-  useEffect(() => {
-    const initializeWorkspace = async () => {
-      if (!workspaceFolder) {
-        try {
-          const folder = await window.api.openFolder()
-          setWorkspaceFolder(folder)
-        } catch (error) {
-          console.error('Failed to initialize workspace:', error)
-        }
-      }
-    }
+  // useEffect(() => {
+  //   const initializeWorkspace = async () => {
+  //     if (!workspaceFolder) {
+  //       try {
+  //         const folder = await window.api.openFolder()
+  //         setWorkspaceFolder(folder)
+  //       } catch (error) {
+  //         console.error('Failed to initialize workspace:', error)
+  //       }
+  //     }
+  //   }
 
-    initializeWorkspace()
-  }, [workspaceFolder])
+  //   initializeWorkspace()
+  // }, [workspaceFolder])
 
   // Track the current document by id for easier updates
 

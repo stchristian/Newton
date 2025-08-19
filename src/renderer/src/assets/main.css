@@ -118,3 +118,11 @@
     @apply bg-background text-foreground;
   }
 }
+
+.cm-editor.cm-focused {
+  @apply outline-none;
+
+}
+.cm-editor .cm-scroller {
+  font-family: inherit;
+}

@@ -15,6 +15,7 @@ export interface FileSystemAPI {
   createFolder: (folderPath: string) => Promise<boolean>
   contextMenu: {
     show: (path?: string) => void
-    onCommand: (cb: (cmd: string) => void) => void
+    onCommand: (cb: (cmd: string, ...args: unknown[]) => void) => void
+    removeListener: () => void
   }
 }

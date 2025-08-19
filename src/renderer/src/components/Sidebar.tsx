@@ -1,13 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import { Button } from './ui/button'
-import { Folder, Plus, StickyNote } from 'lucide-react'
-
-interface FileSystemItem {
-  name: string
-  path: string
-  isDirectory: boolean
-  isFile: boolean
-}
+import { Folder, Plus } from 'lucide-react'
+import TreeView, { FileSystemItem, TreeViewRef } from './TreeView'
 
 interface SidebarProps {
   onDocumentClick: (path: string) => void
@@ -31,7 +25,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [newItemType, setNewItemType] = useState<'note' | 'folder'>('note')
   const [isAddingNewItem, setIsAddingNewItem] = useState(false)
   const [newItemName, setNewItemname] = useState('')
+  const [targetDirectory, setTargetDirectory] = useState<string | null>(null)
+
   const inputRef = useRef<HTMLInputElement>(null)
+  const treeViewRef = useRef<TreeViewRef>(null)
 
   const refresh = useCallback(async () => {
     // Refresh the folder contents
@@ -59,23 +56,57 @@ const Sidebar: React.FC<SidebarProps> = ({
         console.error('Error reading workspace folder:', error)
       }
     }
-    window.api.contextMenu.onCommand(async (cmd, path) => {
+
+    void initializeWorkspace()
+  }, [workspaceFolder])
+
+  // Set up context menu listener
+  useEffect(() => {
+    const handleContextMenuCommand = async (cmd: string, ...args: unknown[]) => {
       switch (cmd) {
+        case 'new':
+          setNewItemType('note')
+          setIsAddingNewItem(true)
+          setNewItemname('')
+          break
         case 'create-folder':
           console.log(cmd)
           setNewItemType('folder')
           setIsAddingNewItem(true)
           setNewItemname('')
           break
-        case 'remove':
+        case 'remove': {
+          const path = args[0] as string
           await window.api.deleteFile(path)
-          refresh()
+          // Refresh the current folder contents
+          if (currentNavFolder) {
+            const items = await window.api.readDirectory(currentNavFolder)
+            setFolderItems(items)
+          }
           break
+        }
       }
-    })
+    }
 
-    void initializeWorkspace()
-  }, [workspaceFolder, refresh])
+    window.api.contextMenu.onCommand(handleContextMenuCommand)
+
+    // Cleanup function to remove the listener when component unmounts
+    return () => {
+      window.api.contextMenu.removeListener()
+    }
+  }, [currentNavFolder]) // Only re-register when currentNavFolder changes
+
+  // Handle context menu from TreeView
+  const handleTreeViewContextMenu = (itemPath: string, itemType: 'file' | 'directory') => {
+    if (itemType === 'directory') {
+      // Set the target directory for creating new items
+      setTargetDirectory(itemPath)
+    } else {
+      // For files, use the current directory
+      setTargetDirectory(currentNavFolder)
+    }
+    window.api.contextMenu.show(itemPath)
+  }
 
   const handleOpenWorkspace = async (): Promise<void> => {
     try {
@@ -88,20 +119,11 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
   }
 
-  const handleFolderItemClick = async (item: FileSystemItem): Promise<void> => {
-    if (item.isDirectory) {
-      try {
-        const items = await window.api.readDirectory(item.path)
-        setFolderItems(items)
-        setCurrentNavFolder(item.path)
-        setFolderHistory((prev) => [...prev, item.path])
-      } catch (error) {
-        console.error('Error reading directory:', error)
-      }
-    } else if (item.isFile) {
-      // TODO: Handle file opening
+  const handleFolderItemClick = (item: FileSystemItem): void => {
+    if (item.isFile) {
       onDocumentClick(item.path)
     }
+    // Folder expansion is now handled by TreeView component
   }
 
   const handleNavigateToFolder = async (
@@ -129,6 +151,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     setIsAddingNewItem(true)
     setNewItemname('')
     setNewItemType('note')
+    setTargetDirectory(null) // Reset target directory when using the button
 
     // Focus the input after a short delay to ensure it's rendered
     setTimeout(() => {
@@ -137,8 +160,12 @@ const Sidebar: React.FC<SidebarProps> = ({
   }
 
   const handleCreateNewItem = async (): Promise<void> => {
-    if (!workspaceFolder || !newItemName.trim()) {
+    // Use target directory if set, otherwise fall back to workspace folder
+    const createInDirectory = targetDirectory || workspaceFolder
+
+    if (!createInDirectory || !newItemName.trim()) {
       setIsAddingNewItem(false)
+      setTargetDirectory(null)
       return
     }
 
@@ -149,29 +176,35 @@ const Sidebar: React.FC<SidebarProps> = ({
         const fileName = newItemName.endsWith('.md') ? newItemName : `${newItemName}.md`
         const content = `# ${fileName.replace('.md', '')}\n\n`
 
-        const filePath = await window.api.createFile(workspaceFolder, fileName, content)
+        const filePath = await window.api.createFile(createInDirectory, fileName, content)
 
         // Refresh the folder contents
-        const items = await window.api.readDirectory(workspaceFolder)
-        setFolderItems(items)
+        refresh()
+
+        // Refresh the specific folder in TreeView if it's expanded
+        treeViewRef.current?.refreshFolder(createInDirectory)
 
         // Find the new file and open it
-        const newFile = items.find((item) => item.path === filePath)
+        const newFile = folderItems.find((item) => item.path === filePath)
         if (newFile) {
           onDocumentClick(filePath)
         }
       } else if (newItemType === 'folder') {
-        await window.api.createFolder(`${workspaceFolder}/${newItemName}`)
+        await window.api.createFolder(`${createInDirectory}/${newItemName}`)
         // Refresh the folder contents
-        const items = await window.api.readDirectory(workspaceFolder)
-        setFolderItems(items)
+        refresh()
+
+        // Refresh the specific folder in TreeView if it's expanded
+        treeViewRef.current?.refreshFolder(createInDirectory)
       }
 
       setIsAddingNewItem(false)
       setNewItemname('')
+      setTargetDirectory(null)
     } catch (error) {
       console.error('Error creating file:', error)
       setIsAddingNewItem(false)
+      setTargetDirectory(null)
     }
   }
 
@@ -213,9 +246,14 @@ const Sidebar: React.FC<SidebarProps> = ({
               value={newItemName}
               onChange={(e) => setNewItemname(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Enter file name..."
+              placeholder={`Enter ${newItemType} name...`}
               className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
+            {targetDirectory && (
+              <div className="text-xs text-gray-500">
+                Creating in: {targetDirectory.split('/').pop() || targetDirectory}
+              </div>
+            )}
             <div className="flex gap-2">
               <Button size="sm" onClick={handleCreateNewItem} disabled={!newItemName.trim()}>
                 Create
@@ -256,36 +294,17 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="p-2 text-sm text-gray-500 border-b border-gray-200">
             {itemsToShow.length} item{itemsToShow.length !== 1 ? 's' : ''}
           </div>
-          <ul>
-            {itemsToShow
-              .sort((a, b) => {
-                // Sort directories first, then files, both alphabetically
-                if (a.isDirectory && !b.isDirectory) return -1
-                if (!a.isDirectory && b.isDirectory) return 1
-                return a.name.localeCompare(b.name)
-              })
-              .map((item, idx) => (
-                <li
-                  key={`${item.path}-${idx}`}
-                  onClick={() => handleFolderItemClick(item)}
-                  className={`p-2 hover:bg-gray-100 cursor-pointer flex items-center ${
-                    activeFilePath === item.path ? 'bg-blue-50 border-r-2 border-blue-500' : ''
-                  }`}
-                  onContextMenu={() => {
-                    window.api.contextMenu.show(item.path)
-                  }}
-                >
-                  <span className="mr-2">
-                    {item.isDirectory ? <Folder size={16} /> : <StickyNote size={16} />}
-                  </span>
-                  <span
-                    className={`truncate ${activeFilePath === item.path ? 'font-medium text-blue-700' : ''}`}
-                  >
-                    {item.name}
-                  </span>
-                </li>
-              ))}
-          </ul>
+          <TreeView
+            ref={treeViewRef}
+            items={itemsToShow}
+            onItemClick={handleFolderItemClick}
+            onFolderExpand={async (folderPath) => {
+              return await window.api.readDirectory(folderPath)
+            }}
+            activeFilePath={activeFilePath}
+            onContextMenu={handleTreeViewContextMenu}
+            className="flex-1"
+          />
         </div>
       )}
     </aside>

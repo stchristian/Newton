@@ -12,8 +12,9 @@ const api: FileSystemAPI = {
     ipcRenderer.invoke('create-file', folderPath, fileName, content),
   contextMenu: {
     show: (path?: string) => ipcRenderer.send('show-context-menu', path),
-    onCommand: (cb: (cmd: string) => void) =>
-      ipcRenderer.on('context-menu-command', (_e, cmd) => cb(cmd))
+    onCommand: (cb: (cmd: string, ...args: unknown[]) => void) =>
+      ipcRenderer.on('context-menu-command', (_e, cmd, ...args) => cb(cmd, ...args)),
+    removeListener: () => ipcRenderer.removeAllListeners('context-menu-command')
   },
   createFolder: (filePath: string) => ipcRenderer.invoke('create-folder', filePath),
   deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath)
