@@ -113,7 +113,6 @@ const TreeView = forwardRef<TreeViewRef, TreeViewProps>(
                   ) : (
                     <ChevronRight size={14} className="text-gray-500" />
                   )}
-                  <Folder size={16} className="ml-1 text-blue-500" />
                 </>
               ) : (
                 <StickyNote size={16} className="text-gray-600" />
