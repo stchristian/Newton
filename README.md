@@ -1,21 +1,22 @@
 # Newton
 Electron-based note-taking app using shadcn/ui and React.
 
-## V1 version needed features:
+## V1 features (in-progress)
 
 - basic file / document management features (add/remove/move files & directories around in the sidebar)
 - support only one note type: Markdown.
 - Markdown viewer: TBD
-- minimalistic simple ui with shadcn
+- Minimalistic simple ui with shadcn
 - support browser apis -> store workspace in local storage.
 
 ## Next
 
-- Remote file storage.
+- Add python based backend
+- Remote file storage (S3?)
 - Integrations (Calendar, gmail etc)
 - Integrated task / todo management
 - Integrated Habit tracker.
-- Links between notes.
+- Links between notes like in Obsidian
 - A note editor better fit for coding ->
   - ability to run javascript
 - Save / Reload active workspace
