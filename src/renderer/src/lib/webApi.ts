@@ -1,33 +1,32 @@
 import { FileSystemAPI, FileSystemItem } from '../../../preload/types'
 
-export interface Document {
-  id: string
-  name: string
+interface WorkspaceItem extends FileSystemItem {
+  content?: string
+}
+
+interface Workspace {
   path: string
-  content: string
-  lastModified: number
+  name: string
+  items: WorkspaceItem[]
 }
 
 class WebAPI implements FileSystemAPI {
-  private documents: Map<string, Document> = new Map()
-  private currentWorkspace: string | null = null
-
-  constructor() {
-    this.loadFromStorage()
-
-    // Add sample documents if none exist
-    if (this.documents.size === 0) {
-      this.addSampleDocuments()
-    }
-  }
+  private currentWorkspace: Workspace | null = null
 
   private loadFromStorage(): void {
     try {
-      const stored = localStorage.getItem('markdown-documents')
+      const stored = localStorage.getItem('workspace')
       if (stored) {
-        const docs = JSON.parse(stored) as Document[]
-        this.documents.clear()
-        docs.forEach((doc) => this.documents.set(doc.path, doc))
+        const workspace = JSON.parse(stored) as Workspace
+        this.currentWorkspace = workspace
+      } else {
+        this.currentWorkspace = {
+          path: '/workspace',
+          name: 'Workspace',
+          items: []
+        }
+
+        this.addSampleDocuments()
       }
     } catch (error) {
       console.error('Failed to load documents from storage:', error)
@@ -35,48 +34,27 @@ class WebAPI implements FileSystemAPI {
   }
 
   private saveToStorage(): void {
-    try {
-      const docs = Array.from(this.documents.values())
-      localStorage.setItem('markdown-documents', JSON.stringify(docs))
-    } catch (error) {
-      console.error('Failed to save documents to storage:', error)
+    if (this.currentWorkspace) {
+      localStorage.setItem('workspace', JSON.stringify(this.currentWorkspace))
     }
   }
 
   async openFolder(): Promise<string> {
     // In web version, we'll use a virtual workspace
-    this.currentWorkspace = '/workspace'
-    return this.currentWorkspace
+    this.loadFromStorage()
+    return this.currentWorkspace?.path || ''
   }
 
   async readDirectory(folderPath: string): Promise<FileSystemItem[]> {
-    const items: FileSystemItem[] = []
-
-    // Add virtual folders
-    items.push({
-      name: 'Documents',
-      path: '/workspace/documents',
-      isDirectory: true,
-      isFile: false
-    })
-
-    // Add markdown files
-    for (const doc of this.documents.values()) {
-      if (doc.path.startsWith(folderPath)) {
-        items.push({
-          name: doc.name,
-          path: doc.path,
-          isDirectory: false,
-          isFile: true
-        })
-      }
-    }
-
-    return items
+    return (
+      this.currentWorkspace?.items.filter(
+        (item) => item.path.startsWith(folderPath) && item.path !== folderPath
+      ) || []
+    )
   }
 
   async readFile(filePath: string): Promise<string> {
-    const doc = this.documents.get(filePath)
+    const doc = this.currentWorkspace?.items.find((item) => item.path === filePath)
     if (doc) {
       return doc.content
     }
@@ -84,11 +62,9 @@ class WebAPI implements FileSystemAPI {
   }
 
   async writeFile(filePath: string, content: string) {
-    const doc = this.documents.get(filePath)
+    const doc = this.currentWorkspace?.items.find((item) => item.path === filePath)
     if (doc) {
       doc.content = content
-      doc.lastModified = Date.now()
-      this.documents.set(filePath, doc)
       this.saveToStorage()
       return true
     } else {
@@ -99,15 +75,15 @@ class WebAPI implements FileSystemAPI {
 
   async createFile(folderPath: string, fileName: string, content: string): Promise<string> {
     const filePath = `${folderPath}/${fileName}`
-    const doc: Document = {
-      id: Date.now().toString(),
+    const doc: WorkspaceItem = {
       name: fileName,
       path: filePath,
       content,
-      lastModified: Date.now()
+      isFile: true,
+      isDirectory: false
     }
 
-    this.documents.set(filePath, doc)
+    this.currentWorkspace?.items.push(doc)
     this.saveToStorage()
     return filePath
   }
@@ -117,7 +93,8 @@ class WebAPI implements FileSystemAPI {
       // Web version - could implement custom context menu
       console.log('Context menu requested')
     },
-    onCommand: () => {}
+    onCommand: () => {},
+    removeListener: () => {}
   }
 
   private addSampleDocuments(): void {
@@ -171,22 +148,43 @@ Happy writing!`
       }
     ]
 
-    samples.forEach((sample, index) => {
-      const doc: Document = {
-        id: (index + 1).toString(),
+    samples.forEach((sample) => {
+      const doc: WorkspaceItem = {
         name: sample.name,
-        path: `/workspace/documents/${sample.name}`,
-        content: sample.content,
-        lastModified: Date.now()
+        path: `/workspace/${sample.name}`,
+        isFile: true,
+        isDirectory: false,
+        content: sample.content
       }
-      this.documents.set(doc.path, doc)
+      this.currentWorkspace?.items.push(doc)
     })
 
     this.saveToStorage()
+  }
+
+  deleteFile(filePath: string): Promise<boolean> {
+    this.currentWorkspace!.items =
+      this.currentWorkspace!.items.filter((item) => item.path !== filePath) || []
+    this.saveToStorage()
+    return Promise.resolve(true)
+  }
+
+  createFolder(filePath: string): Promise<boolean> {
+    // In web version, we'll just create a new folder in the workspace
+    const name = filePath.split('/').pop() || 'New Folder'
+    this.currentWorkspace?.items.push({
+      name,
+      path: filePath,
+      isFile: false,
+      isDirectory: true
+    })
+    this.saveToStorage()
+    return Promise.resolve(true)
   }
 }
 
 // Expose the API globally for web
 if (typeof window.api === 'undefined') {
   window.api = new WebAPI()
+  window.WEB_VERSION = true
 }

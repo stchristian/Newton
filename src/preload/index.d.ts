@@ -4,5 +4,6 @@ declare global {
   interface Window {
     electron: ElectronAPI
     api: import('./types').FileSystemAPI
+    WEB_VERSION: boolean
   }
 }

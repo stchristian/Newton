@@ -2,6 +2,12 @@ import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import { Button } from './ui/button'
 import { Folder, Plus } from 'lucide-react'
 import TreeView, { FileSystemItem, TreeViewRef } from './TreeView'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger
+} from './ui/context-menu'
 
 interface SidebarProps {
   onDocumentClick: (path: string) => void
@@ -60,6 +66,12 @@ const Sidebar: React.FC<SidebarProps> = ({
     void initializeWorkspace()
   }, [workspaceFolder])
 
+  function handleAddFolder() {
+    setNewItemType('folder')
+    setIsAddingNewItem(true)
+    setNewItemname('')
+  }
+
   // Set up context menu listener
   useEffect(() => {
     const handleContextMenuCommand = async (cmd: string, ...args: unknown[]) => {
@@ -70,10 +82,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           setNewItemname('')
           break
         case 'create-folder':
-          console.log(cmd)
-          setNewItemType('folder')
-          setIsAddingNewItem(true)
-          setNewItemname('')
+          handleAddFolder()
           break
         case 'remove': {
           const path = args[0] as string
@@ -98,6 +107,9 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   // Handle context menu from TreeView
   const handleTreeViewContextMenu = (itemPath: string, itemType: 'file' | 'directory') => {
+    if (window.WEB_VERSION) {
+      return false
+    }
     if (itemType === 'directory') {
       // Set the target directory for creating new items
       setTargetDirectory(itemPath)
@@ -218,12 +230,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   }
 
   return (
-    <aside
-      className="border-r border-gray-200 w-[250px] flex flex-col"
-      onContextMenu={() => {
-        window.api.contextMenu.show()
-      }}
-    >
+    <aside className="border-r border-gray-200 w-[250px] flex flex-col h-full">
       {/* Open Folder Button */}
       <div className="p-4 border-b flex flex-row border-gray-200 gap-2">
         <Button variant="ghost" onClick={handleAddNote} disabled={!workspaceFolder}>
@@ -288,25 +295,49 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       )}
 
-      {/* Folder Contents */}
-      {itemsToShow.length > 0 && (
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-2 text-sm text-gray-500 border-b border-gray-200">
-            {itemsToShow.length} item{itemsToShow.length !== 1 ? 's' : ''}
-          </div>
-          <TreeView
-            ref={treeViewRef}
-            items={itemsToShow}
-            onItemClick={handleFolderItemClick}
-            onFolderExpand={async (folderPath) => {
-              return await window.api.readDirectory(folderPath)
+      <ContextMenu>
+        <ContextMenuTrigger className="flex-1">
+          <div
+            onContextMenu={() => {
+              if (!window.WEB_VERSION) {
+                window.api.contextMenu.show()
+                // Prevent default context menu in Electron
+                return false
+              }
+              return true
             }}
-            activeFilePath={activeFilePath}
-            onContextMenu={handleTreeViewContextMenu}
-            className="flex-1"
-          />
-        </div>
-      )}
+          >
+            {/* Folder Contents */}
+            {itemsToShow.length > 0 && (
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-2 text-sm text-gray-500 border-b border-gray-200">
+                  {itemsToShow.length} item{itemsToShow.length !== 1 ? 's' : ''}
+                </div>
+                <TreeView
+                  ref={treeViewRef}
+                  items={itemsToShow}
+                  onItemClick={handleFolderItemClick}
+                  onFolderExpand={async (folderPath) => {
+                    console.log('expanding', folderPath)
+                    const result = await window.api.readDirectory(folderPath)
+                    console.log('result', result)
+                    return result
+                  }}
+                  activeFilePath={activeFilePath}
+                  onContextMenu={handleTreeViewContextMenu}
+                  className="flex-1"
+                />
+              </div>
+            )}
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem onClick={handleAddNote}>New note</ContextMenuItem>
+          <ContextMenuItem onClick={handleAddFolder}>New folder</ContextMenuItem>
+          {/* <ContextMenuItem>Team</ContextMenuItem>
+        <ContextMenuItem>Subscription</ContextMenuItem> */}
+        </ContextMenuContent>
+      </ContextMenu>
     </aside>
   )
 }

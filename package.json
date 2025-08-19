@@ -30,6 +30,7 @@
     "@codemirror/view": "^6.38.1",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "@radix-ui/react-context-menu": "^2.2.16",
     "@radix-ui/react-slot": "^1.2.3",
     "@tailwindcss/vite": "^4.1.11",
     "class-variance-authority": "^0.7.1",
