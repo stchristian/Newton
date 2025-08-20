@@ -1,4 +1,5 @@
 # Newton
+
 Electron-based note-taking app using shadcn/ui and React.
 
 ## V1 features (in-progress)

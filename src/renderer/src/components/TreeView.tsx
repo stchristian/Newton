@@ -1,5 +1,5 @@
-import { useState, useCallback, forwardRef, useImperativeHandle } from 'react'
-import { ChevronRight, ChevronDown, Folder, StickyNote } from 'lucide-react'
+import React, { useState, useCallback, forwardRef, useImperativeHandle } from 'react'
+import { ChevronRight, ChevronDown, FileText } from 'lucide-react'
 
 interface FileSystemItem {
   name: string
@@ -115,7 +115,7 @@ const TreeView = forwardRef<TreeViewRef, TreeViewProps>(
                   )}
                 </>
               ) : (
-                <StickyNote size={16} className="text-gray-600" />
+                <FileText size={16} className="text-gray-600" />
               )}
             </span>
             <span

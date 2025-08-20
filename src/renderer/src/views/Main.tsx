@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef } from 'react'
 import MarkdownViewer, { MarkdownViewerRef } from '../components/MarkdownViewer'
 import Sidebar from '../components/Sidebar'
 
@@ -56,7 +56,12 @@ export default function Main(): React.ReactElement {
       try {
         const content = await window.api.readFile(path)
         const name = path.split('/').pop() ?? path
-        setActiveDocument({ id: Date.now(), name, markdownContent: content, path })
+        setActiveDocument({
+          id: Date.now(),
+          name,
+          markdownContent: content,
+          path
+        })
 
         // Focus the editor after a short delay to ensure it's rendered
         setTimeout(() => {
