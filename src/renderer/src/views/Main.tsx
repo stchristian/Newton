@@ -1,6 +1,8 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import MarkdownViewer, { MarkdownViewerRef } from '../components/MarkdownViewer'
-import Sidebar from '../components/Sidebar'
+import { Sidebar } from '../components/layout'
+import { useWorkspace } from '../shared/hooks/useWorkspace'
+import { FileSystemService } from '../features/file-explorer'
 
 interface Document {
   id: number
@@ -11,36 +13,21 @@ interface Document {
 
 export default function Main(): React.ReactElement {
   const [activeDocument, setActiveDocument] = useState<Document | null>(null)
-
-  // Workspace folder selected by the user
-  const [workspaceFolder, setWorkspaceFolder] = useState<string | null>(null)
-
-  // Ref to focus the editor
+  const { workspaceFolder, setActiveFilePath, initializeWorkspace } = useWorkspace()
   const editorRef = useRef<MarkdownViewerRef>(null)
 
-  // Initialize workspace on component mount for web version
-  // useEffect(() => {
-  //   const initializeWorkspace = async () => {
-  //     if (!workspaceFolder) {
-  //       try {
-  //         const folder = await window.api.openFolder()
-  //         setWorkspaceFolder(folder)
-  //       } catch (error) {
-  //         console.error('Failed to initialize workspace:', error)
-  //       }
-  //     }
-  //   }
-
-  //   initializeWorkspace()
-  // }, [workspaceFolder])
-
-  // Track the current document by id for easier updates
+  // Initialize workspace when component mounts
+  useEffect(() => {
+    if (workspaceFolder) {
+      void initializeWorkspace(workspaceFolder)
+    }
+  }, [workspaceFolder, initializeWorkspace])
 
   const handleSave = (markdown: string): void => {
     if (!activeDocument) return
     void (async () => {
       try {
-        await window.api.writeFile(activeDocument.path, markdown)
+        await FileSystemService.writeFile(activeDocument.path, markdown)
         setActiveDocument((prev) => (prev ? { ...prev, markdownContent: markdown } : prev))
       } catch (error) {
         console.error('Failed to save markdown file:', error)
@@ -49,19 +36,19 @@ export default function Main(): React.ReactElement {
   }
 
   const handleDocumentClick = (path: string): void => {
-    const isMarkdown = /\.(md|mdx|markdown)$/i.test(path)
-    if (!isMarkdown) return
+    if (!FileSystemService.isMarkdownFile(path)) return
 
     void (async () => {
       try {
-        const content = await window.api.readFile(path)
-        const name = path.split('/').pop() ?? path
+        const content = await FileSystemService.readFile(path)
+        const name = FileSystemService.getFileName(path)
         setActiveDocument({
           id: Date.now(),
           name,
           markdownContent: content,
           path
         })
+        setActiveFilePath(path)
 
         // Focus the editor after a short delay to ensure it's rendered
         setTimeout(() => {
@@ -75,12 +62,7 @@ export default function Main(): React.ReactElement {
 
   return (
     <div className="flex h-screen">
-      <Sidebar
-        workspaceFolder={workspaceFolder}
-        onChangeWorkspaceFolder={setWorkspaceFolder}
-        onDocumentClick={handleDocumentClick}
-        activeFilePath={activeDocument?.path}
-      />
+      <Sidebar onDocumentClick={handleDocumentClick} />
       {activeDocument && (
         <MarkdownViewer
           ref={editorRef}

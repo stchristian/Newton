@@ -1,11 +1,11 @@
-import { app, shell, BrowserWindow, ipcMain, screen, dialog, Menu } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, screen, dialog, Menu, globalShortcut } from 'electron'
 import { join } from 'path'
 import { readdir, stat, readFile, writeFile, mkdir, unlink } from 'fs/promises'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 
 function createWindow(): void {
-  const template = [
+  const template: Electron.MenuItemConstructorOptions[] = [
     {
       label: 'View',
       submenu: [
@@ -16,6 +16,29 @@ function createWindow(): void {
             mainWindow.webContents.openDevTools({
               mode: 'right'
             })
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Reload Window',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => {
+            mainWindow.reload()
+          }
+        },
+        {
+          label: 'Hard Reload Window',
+          accelerator: 'CmdOrCtrl+Shift+R',
+          click: () => {
+            mainWindow.webContents.reloadIgnoringCache()
+          }
+        },
+        {
+          label: 'Restart App',
+          accelerator: 'CmdOrCtrl+Shift+Alt+R',
+          click: () => {
+            app.relaunch()
+            app.exit(0)
           }
         }
       ]
@@ -70,6 +93,19 @@ app.whenReady().then(() => {
   // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
+
+    // Add global shortcuts for development
+    if (is.dev) {
+      // Global shortcut for reloading the window
+      globalShortcut.register('CmdOrCtrl+Shift+R', () => {
+        window.webContents.reloadIgnoringCache()
+      })
+
+      globalShortcut.register('CmdOrCtrl+Shift+Alt+R', () => {
+        app.relaunch()
+        app.exit(0)
+      })
+    }
   })
 
   // IPC test
@@ -222,6 +258,11 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+// Clean up global shortcuts when app is about to quit
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll()
 })
 
 // In this file you can include the rest of your app's specific main process

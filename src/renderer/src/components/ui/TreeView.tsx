@@ -1,7 +1,7 @@
-import React, { useState, useCallback, forwardRef, useImperativeHandle } from 'react'
+import { useState, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { ChevronRight, ChevronDown, FileText } from 'lucide-react'
 
-interface FileSystemItem {
+interface TreeViewItem {
   name: string
   path: string
   isDirectory: boolean
@@ -13,9 +13,9 @@ export interface TreeViewRef {
 }
 
 interface TreeViewProps {
-  items: FileSystemItem[]
-  onItemClick: (item: FileSystemItem) => void
-  onFolderExpand?: (folderPath: string) => Promise<FileSystemItem[]>
+  items: TreeViewItem[]
+  onItemClick: (item: TreeViewItem) => void
+  onFolderExpand?: (folderPath: string) => Promise<TreeViewItem[]>
   activeFilePath?: string
   onContextMenu?: (itemPath: string, itemType: 'file' | 'directory') => void
   className?: string
@@ -24,7 +24,7 @@ interface TreeViewProps {
 const TreeView = forwardRef<TreeViewRef, TreeViewProps>(
   ({ items, onItemClick, onFolderExpand, activeFilePath, onContextMenu, className = '' }, ref) => {
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
-    const [folderContents, setFolderContents] = useState<Map<string, FileSystemItem[]>>(new Map())
+    const [folderContents, setFolderContents] = useState<Map<string, TreeViewItem[]>>(new Map())
 
     useImperativeHandle(ref, () => ({
       refreshFolder: refreshFolderContents
@@ -46,7 +46,7 @@ const TreeView = forwardRef<TreeViewRef, TreeViewProps>(
     )
 
     const handleFolderClick = useCallback(
-      async (item: FileSystemItem) => {
+      async (item: TreeViewItem) => {
         if (!item.isDirectory || !onFolderExpand) return
 
         const newExpanded = new Set(expandedFolders)
@@ -76,7 +76,7 @@ const TreeView = forwardRef<TreeViewRef, TreeViewProps>(
     )
 
     const handleItemClick = useCallback(
-      (item: FileSystemItem) => {
+      (item: TreeViewItem) => {
         if (item.isDirectory) {
           void handleFolderClick(item)
         } else {
@@ -86,7 +86,7 @@ const TreeView = forwardRef<TreeViewRef, TreeViewProps>(
       [handleFolderClick, onItemClick]
     )
 
-    const renderTreeItem = (item: FileSystemItem, level: number = 0) => {
+    const renderTreeItem = (item: TreeViewItem, level: number = 0) => {
       const isExpanded = expandedFolders.has(item.path)
       const isActive = activeFilePath === item.path
       const hasChildren = item.isDirectory && folderContents.has(item.path)
@@ -124,7 +124,7 @@ const TreeView = forwardRef<TreeViewRef, TreeViewProps>(
               }`}
               title={item.name}
             >
-              {item.name}
+              {item.name.replace('.md', '')}
             </span>
           </div>
 
@@ -165,4 +165,4 @@ const TreeView = forwardRef<TreeViewRef, TreeViewProps>(
 
 TreeView.displayName = 'TreeView'
 export default TreeView
-export type { FileSystemItem, TreeViewProps }
+export type { TreeViewItem as FileSystemItem, TreeViewProps }
