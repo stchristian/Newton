@@ -1,57 +1,20 @@
-import { app, shell, BrowserWindow, ipcMain, screen, dialog, Menu, globalShortcut } from 'electron'
+import { app, shell, BrowserWindow, screen, globalShortcut } from 'electron'
 import { join } from 'path'
-import { readdir, stat, readFile, writeFile, mkdir, unlink } from 'fs/promises'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { createApplicationMenu } from './application-menu'
+import './handlers/clipboard'
+import './handlers/file-system'
+import './context-menu'
+
+let mainWindow: BrowserWindow | null = null
 
 function createWindow(): void {
-  const template: Electron.MenuItemConstructorOptions[] = [
-    {
-      label: 'View',
-      submenu: [
-        {
-          label: 'Toggle Developer Tools',
-          accelerator: 'CmdOrCtrl+Alt+I',
-          click: () => {
-            mainWindow.webContents.openDevTools({
-              mode: 'right'
-            })
-          }
-        },
-        { type: 'separator' },
-        {
-          label: 'Reload Window',
-          accelerator: 'CmdOrCtrl+R',
-          click: () => {
-            mainWindow.reload()
-          }
-        },
-        {
-          label: 'Hard Reload Window',
-          accelerator: 'CmdOrCtrl+Shift+R',
-          click: () => {
-            mainWindow.webContents.reloadIgnoringCache()
-          }
-        },
-        {
-          label: 'Restart App',
-          accelerator: 'CmdOrCtrl+Shift+Alt+R',
-          click: () => {
-            app.relaunch()
-            app.exit(0)
-          }
-        }
-      ]
-    }
-  ]
-
-  const menu = Menu.buildFromTemplate(template)
-  Menu.setApplicationMenu(menu)
   // Create the browser window with size equal to the screen size.
   const primaryDisplay = screen.getPrimaryDisplay()
   const { width, height } = primaryDisplay.workAreaSize
 
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width,
     height,
     show: false,
@@ -62,6 +25,8 @@ function createWindow(): void {
       sandbox: false
     }
   })
+
+  createApplicationMenu(mainWindow)
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -106,140 +71,6 @@ app.whenReady().then(() => {
         app.exit(0)
       })
     }
-  })
-
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
-
-  // IPC handlers for file system operations
-  ipcMain.handle('open-folder', async () => {
-    const result = await dialog.showOpenDialog({
-      properties: ['openDirectory']
-    })
-
-    if (!result.canceled && result.filePaths.length > 0) {
-      return result.filePaths[0]
-    }
-    return null
-  })
-
-  ipcMain.handle('read-directory', async (_, folderPath: string) => {
-    try {
-      const items = await readdir(folderPath)
-      const fileList = await Promise.all(
-        items.map(async (item) => {
-          const itemPath = join(folderPath, item)
-          const stats = await stat(itemPath)
-          return {
-            name: item,
-            path: itemPath,
-            isDirectory: stats.isDirectory(),
-            isFile: stats.isFile()
-          }
-        })
-      )
-      return fileList
-    } catch (error) {
-      console.error('Error reading directory:', error)
-      throw error
-    }
-  })
-
-  ipcMain.handle('read-file', async (_, filePath: string) => {
-    try {
-      const content = await readFile(filePath, 'utf-8')
-      return content
-    } catch (error) {
-      console.error('Error reading file:', error)
-      throw error
-    }
-  })
-
-  ipcMain.handle('delete-file', async (_, filePath: string) => {
-    try {
-      await unlink(filePath)
-      return true
-    } catch (error) {
-      console.error('Error removing file:', error)
-      throw error
-    }
-  })
-
-  ipcMain.handle('write-file', async (_, filePath: string, content: string) => {
-    try {
-      await writeFile(filePath, content, 'utf-8')
-      return true
-    } catch (error) {
-      console.error('Error writing file:', error)
-      throw error
-    }
-  })
-
-  ipcMain.handle('create-folder', async (_, filePath: string) => {
-    try {
-      await mkdir(filePath)
-      return true
-    } catch (error) {
-      console.error('Error creating folder:', error)
-      throw error
-    }
-  })
-
-  ipcMain.handle(
-    'create-file',
-    async (_, folderPath: string, fileName: string, content: string) => {
-      try {
-        const filePath = join(folderPath, fileName)
-        await writeFile(filePath, content, 'utf-8')
-        return filePath
-      } catch (error) {
-        console.error('Error creating file:', error)
-        throw error
-      }
-    }
-  )
-
-  ipcMain.on('show-context-menu', (event, path: string) => {
-    let template: Array<Electron.MenuItem | Electron.MenuItemConstructorOptions> = []
-    if (path) {
-      template = [
-        {
-          label: 'New',
-          accelerator: 'CmdOrCtrl+N',
-          click: () => event.sender.send('context-menu-command', 'new')
-        },
-        {
-          label: 'New folder',
-          click: () => event.sender.send('context-menu-command', 'create-folder')
-        },
-        { type: 'separator' },
-        {
-          label: 'Rename',
-          click: () => event.sender.send('context-menu-command', 'rename')
-        },
-        {
-          label: 'Remove',
-          accelerator: 'CmdOrCtrl+S',
-          click: async () => {
-            event.sender.send('context-menu-command', 'remove', path)
-          }
-        }
-      ]
-    } else {
-      template = [
-        {
-          label: 'New',
-          accelerator: 'CmdOrCtrl+N',
-          click: () => event.sender.send('context-menu-command', 'new')
-        },
-        {
-          label: 'New folder',
-          click: () => event.sender.send('context-menu-command', 'create-folder')
-        }
-      ]
-    }
-    const menu = Menu.buildFromTemplate(template)
-    menu.popup()
   })
 
   createWindow()

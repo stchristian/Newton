@@ -181,6 +181,27 @@ Happy writing!`
     this.saveToStorage()
     return Promise.resolve(true)
   }
+
+  clipboard = {
+    readText: () => Promise.resolve(navigator.clipboard.readText()),
+    writeText: (text: string) => {
+      navigator.clipboard.writeText(text)
+      return Promise.resolve(true)
+    }
+  }
+
+  onRequestCopy() {
+    return () => {}
+  }
+  onRequestCut() {
+    return () => {}
+  }
+  onPasteText() {
+    return () => {}
+  }
+  onRequestSelectAll() {
+    return () => {}
+  }
 }
 
 // Expose the API globally for web

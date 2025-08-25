@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { FileSystemAPI } from './types'
 
@@ -17,7 +17,29 @@ const api: FileSystemAPI = {
     removeListener: () => ipcRenderer.removeAllListeners('context-menu-command')
   },
   createFolder: (filePath: string) => ipcRenderer.invoke('create-folder', filePath),
-  deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath)
+  deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath),
+  clipboard: {
+    readText: () => ipcRenderer.invoke('get-clipboard-text'),
+    writeText: (text: string) => ipcRenderer.invoke('set-clipboard-text', text)
+  },
+  // Add new clipboard operations
+  onRequestCopy: (callback: () => void) => {
+    ipcRenderer.on('request-copy', callback)
+    return () => ipcRenderer.removeListener('request-copy', callback)
+  },
+  onRequestCut: (callback: () => void) => {
+    ipcRenderer.on('request-cut', callback)
+    return () => ipcRenderer.removeListener('request-cut', callback)
+  },
+  onPasteText: (callback: (text: string) => void) => {
+    const wrappedCallback = (_e: IpcRendererEvent, text: string) => callback(text)
+    ipcRenderer.on('paste-text', wrappedCallback)
+    return () => ipcRenderer.removeListener('paste-text', wrappedCallback)
+  },
+  onRequestSelectAll: (callback: () => void) => {
+    ipcRenderer.on('request-select-all', callback)
+    return () => ipcRenderer.removeListener('request-select-all', callback)
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

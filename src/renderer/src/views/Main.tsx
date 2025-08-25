@@ -48,7 +48,7 @@ export default function Main(): React.ReactElement {
           markdownContent: content,
           path
         })
-        setActiveFilePath(path)
+        // setActiveFilePath(path)
 
         // Focus the editor after a short delay to ensure it's rendered
         setTimeout(() => {
@@ -68,6 +68,7 @@ export default function Main(): React.ReactElement {
           ref={editorRef}
           value={activeDocument.markdownContent}
           fileName={activeDocument.name}
+          filePath={activeDocument.path}
           onSave={handleSave}
         />
       )}

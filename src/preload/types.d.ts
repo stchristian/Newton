@@ -18,4 +18,12 @@ export interface FileSystemAPI {
     onCommand: (cb: (cmd: string, ...args: unknown[]) => void) => void
     removeListener: () => void
   }
+  clipboard: {
+    readText: () => Promise<string>
+    writeText: (text: string) => Promise<boolean>
+  }
+  onRequestCopy: (callback: () => void) => () => void
+  onRequestCut: (callback: () => void) => () => void
+  onPasteText: (callback: (text: string) => void) => () => void
+  onRequestSelectAll: (callback: () => void) => () => void
 }

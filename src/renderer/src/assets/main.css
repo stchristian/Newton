@@ -125,3 +125,7 @@
 .cm-editor .cm-scroller {
   font-family: inherit;
 }
+
+.cm-editor {
+  @apply overflow-y-auto;
+}
