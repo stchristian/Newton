@@ -1,7 +1,7 @@
 // IPC handlers for file system operations
 
 import { dialog, ipcMain } from 'electron'
-import { readdir, stat, readFile, unlink, writeFile, mkdir } from 'fs/promises'
+import { readdir, stat, readFile, unlink, writeFile, mkdir, rename } from 'fs/promises'
 import { join } from 'path'
 
 ipcMain.handle('open-folder', async () => {
@@ -22,11 +22,18 @@ ipcMain.handle('read-directory', async (_, folderPath: string) => {
       items.map(async (item) => {
         const itemPath = join(folderPath, item)
         const stats = await stat(itemPath)
+        let type: 'directory' | 'note' | 'unknown' = 'unknown'
+
+        if (stats.isDirectory()) {
+          type = 'directory'
+        } else if (item.endsWith('.md')) {
+          type = 'note'
+        }
+
         return {
           name: item,
           path: itemPath,
-          isDirectory: stats.isDirectory(),
-          isFile: stats.isFile()
+          type
         }
       })
     )
@@ -84,6 +91,26 @@ ipcMain.handle('create-file', async (_, folderPath: string, fileName: string, co
     return filePath
   } catch (error) {
     console.error('Error creating file:', error)
+    throw error
+  }
+})
+
+ipcMain.handle('rename-file', async (_, filePath: string, newPath: string) => {
+  try {
+    await rename(filePath, newPath)
+    return true
+  } catch (error) {
+    console.error('Error renaming/moving file:', error)
+    throw error
+  }
+})
+
+ipcMain.handle('move-file', async (_, sourcePath: string, destinationPath: string) => {
+  try {
+    await rename(sourcePath, destinationPath)
+    return true
+  } catch (error) {
+    console.error('Error moving file:', error)
     throw error
   }
 })

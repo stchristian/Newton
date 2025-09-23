@@ -4,8 +4,8 @@ import { EditorView } from '@codemirror/view'
 import { markdown as cmMarkdown } from '@codemirror/lang-markdown'
 import { syntaxHighlighting, HighlightStyle } from '@codemirror/language'
 import { tags } from '@lezer/highlight'
-import { FileSystemService } from '../features/file-explorer'
 import { config } from './EditorConfig'
+import { StorageService } from '@renderer/features/storage'
 
 interface MarkdownViewerProps {
   value: string
@@ -78,7 +78,7 @@ const MarkdownViewer = forwardRef<MarkdownViewerRef, MarkdownViewerProps>(
 
           setIsSaving(true)
           try {
-            await FileSystemService.writeFile(filePath, content)
+            await StorageService.writeFile(filePath, content)
             setLastSaved(new Date())
             // Call the onSave callback if provided
             onSave?.(content)

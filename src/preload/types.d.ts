@@ -1,8 +1,7 @@
 export interface FileSystemItem {
   name: string
   path: string
-  isDirectory: boolean
-  isFile: boolean
+  type: 'directory' | 'note' | 'unknown'
 }
 
 export interface FileSystemAPI {
@@ -13,6 +12,7 @@ export interface FileSystemAPI {
   deleteFile: (folderPath: string) => Promise<boolean>
   createFile: (folderPath: string, fileName: string, content: string) => Promise<string>
   createFolder: (folderPath: string) => Promise<boolean>
+  renameFile: (filePath: string, newPath: string) => Promise<boolean>
   contextMenu: {
     show: (path?: string) => void
     onCommand: (cb: (cmd: string, ...args: unknown[]) => void) => void

@@ -16,7 +16,7 @@ ipcMain.on('show-context-menu', (event, path: string) => {
       { type: 'separator' },
       {
         label: 'Rename',
-        click: () => event.sender.send('context-menu-command', 'rename')
+        click: () => event.sender.send('context-menu-command', 'rename', path)
       },
       {
         label: 'Remove',

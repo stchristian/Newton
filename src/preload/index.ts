@@ -10,6 +10,8 @@ const api: FileSystemAPI = {
     ipcRenderer.invoke('write-file', filePath, content),
   createFile: (folderPath: string, fileName: string, content: string) =>
     ipcRenderer.invoke('create-file', folderPath, fileName, content),
+  renameFile: (filePath: string, newPath: string) =>
+    ipcRenderer.invoke('rename-file', filePath, newPath),
   contextMenu: {
     show: (path?: string) => ipcRenderer.send('show-context-menu', path),
     onCommand: (cb: (cmd: string, ...args: unknown[]) => void) =>

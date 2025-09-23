@@ -5,16 +5,48 @@ import {
   ContextMenuTrigger
 } from '../../../components/ui'
 import { useNavigator } from '../hooks/useNavigator'
-import { useContextMenu } from '@renderer/shared/hooks/useContextMenu'
-import { ReactNode } from 'react'
+import { ReactNode, useEffect } from 'react'
 
 interface ContextMenuProviderProps {
   children: ReactNode
 }
 
+function useContextMenuHandler() {
+  const { handleAddFolder, handleAddNote } = useNavigator()
+
+  useEffect(() => {
+    window.api.contextMenu.onCommand((cmd, ...args) => {
+      switch (cmd) {
+        case 'new':
+          handleAddNote()
+        case 'create-folder':
+          handleAddFolder()
+          break
+        case 'remove': {
+          const path = args[0] as string
+          break
+        }
+        case 'rename': {
+          const path = args[0] as string
+          console.log('path', path)
+          // if (path) {
+          //   set({ pathOfFileUnderRename: path })
+          //   set({ newNameOfFileUnderRename: path.split('/').pop() })
+          // }
+          break
+        }
+      }
+    })
+
+    return () => {
+      window.api.contextMenu.removeListener()
+    }
+  }, [])
+}
+
 export const ContextMenuProvider = ({ children }: ContextMenuProviderProps) => {
   // Set up context menu listeners
-  useContextMenu()
+  useContextMenuHandler()
   const { handleAddFolder, handleAddNote } = useNavigator()
 
   return (

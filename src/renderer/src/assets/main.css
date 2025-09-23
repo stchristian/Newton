@@ -129,3 +129,14 @@
 .cm-editor {
   @apply overflow-y-auto;
 }
+
+/* Add this to your CSS */
+.header {
+  -webkit-app-region: drag;
+  padding-left: 80px;
+}
+
+.header * {
+  -webkit-app-region: no-drag;
+}
+
