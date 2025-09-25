@@ -14,7 +14,7 @@ export interface FileSystemAPI {
   createFolder: (folderPath: string) => Promise<boolean>
   renameFile: (filePath: string, newPath: string) => Promise<boolean>
   contextMenu: {
-    show: (path?: string) => void
+    show: (context: import('../renderer/src/features/navigator').ContextMenuContext) => void
     onCommand: (cb: (cmd: string, ...args: unknown[]) => void) => void
     removeListener: () => void
   }

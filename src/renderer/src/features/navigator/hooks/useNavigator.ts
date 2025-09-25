@@ -50,12 +50,32 @@ export const useNavigator = () => {
     cancelNewItem()
   }
 
+  const handleRename = (itemPath: string) => {
+    console.log('Rename operation for:', itemPath)
+    // TODO: Implement rename functionality
+    // This would involve:
+    // 1. Setting the item to editing mode
+    // 2. Allowing user to enter new name
+    // 3. Calling StorageService.renameFile or similar
+  }
+
+  const handleDelete = (itemPath: string) => {
+    console.log('Delete operation for:', itemPath)
+    // TODO: Implement delete functionality
+    // This would involve:
+    // 1. Showing confirmation dialog
+    // 2. Calling StorageService.deleteFile
+    // 3. Updating the tree state
+  }
+
   return {
     handleAddFolder,
     handleAddNote,
     handleFolderExpand,
     handleCancelNewItem,
     handleSaveNewItem,
+    handleRename,
+    handleDelete,
     openContextMenu,
     newItem
   }

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { TreeItem as TreeItemData } from '../stores/navigator-store'
 import clsx from 'clsx'
 import { ChevronDown, ChevronRight } from 'lucide-react'
+import type { ContextMenuContext } from '../types/context-menu'
 
 // Separate component for tree item to use hooks properly
 interface TreeItemProps {
@@ -13,7 +14,7 @@ interface TreeItemProps {
   draft: boolean
   onItemClick: (item: TreeItemData) => void
   onFolderClick: (item: TreeItemData) => void
-  onContextMenu?: (itemPath: string, itemType: 'file' | 'directory') => void
+  onContextMenu?: (context: ContextMenuContext) => void
   onSaveDraft: (name: string) => void
   onCancelDraft: () => void
   renderChildren: (children: TreeItemData[], level: number) => React.ReactNode
@@ -75,7 +76,11 @@ export const TreeItem = ({
         onClick={handleItemClick}
         onContextMenu={(e) => {
           e.preventDefault()
-          onContextMenu?.(item.path, item.type === 'directory' ? 'directory' : 'file')
+          onContextMenu?.({
+            type: item.type === 'directory' ? 'folder' : 'file',
+            itemPath: item.path,
+            itemType: item.type === 'directory' ? 'directory' : 'file'
+          })
         }}
       >
         <span className="mr-2 flex items-center">

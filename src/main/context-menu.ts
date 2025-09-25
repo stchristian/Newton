@@ -1,44 +1,24 @@
 import { ipcMain, Menu } from 'electron'
+import type { ContextMenuContext } from '../renderer/src/features/navigator'
+import { CONTEXT_MENU_ITEMS } from '../renderer/src/features/navigator'
 
-ipcMain.on('show-context-menu', (event, path: string) => {
-  let template: Array<Electron.MenuItem | Electron.MenuItemConstructorOptions> = []
-  if (path) {
-    template = [
-      {
-        label: 'New',
-        accelerator: 'CmdOrCtrl+N',
-        click: () => event.sender.send('context-menu-command', 'new')
-      },
-      {
-        label: 'New folder',
-        click: () => event.sender.send('context-menu-command', 'create-folder')
-      },
-      { type: 'separator' },
-      {
-        label: 'Rename',
-        click: () => event.sender.send('context-menu-command', 'rename', path)
-      },
-      {
-        label: 'Remove',
-        accelerator: 'CmdOrCtrl+S',
-        click: async () => {
-          event.sender.send('context-menu-command', 'remove', path)
-        }
-      }
-    ]
-  } else {
-    template = [
-      {
-        label: 'New',
-        accelerator: 'CmdOrCtrl+N',
-        click: () => event.sender.send('context-menu-command', 'new')
-      },
-      {
-        label: 'New folder',
-        click: () => event.sender.send('context-menu-command', 'create-folder')
-      }
-    ]
-  }
+ipcMain.on('show-context-menu', (event, context: ContextMenuContext) => {
+  const items = CONTEXT_MENU_ITEMS[context.type] || []
+
+  const template: Array<Electron.MenuItem | Electron.MenuItemConstructorOptions> = []
+
+  items.forEach((item, index) => {
+    // Add separator before destructive items
+    if (index > 0 && item.variant === 'destructive') {
+      template.push({ type: 'separator' })
+    }
+
+    template.push({
+      label: item.label,
+      click: () => event.sender.send('context-menu-command', item.id, context.itemPath)
+    })
+  })
+
   const menu = Menu.buildFromTemplate(template)
   menu.popup()
 })

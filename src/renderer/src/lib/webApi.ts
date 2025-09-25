@@ -89,12 +89,16 @@ class WebAPI implements FileSystemAPI {
   }
 
   contextMenu = {
-    show: () => {
-      // Web version - could implement custom context menu
-      console.log('Context menu requested')
+    show: (context: import('../features/navigator').ContextMenuContext) => {
+      // Web version - will be handled by shadcn context menu
+      console.log('Context menu requested for', context)
     },
-    onCommand: () => {},
-    removeListener: () => {}
+    onCommand: (cb: (cmd: string, ...args: unknown[]) => void) => {
+      // Web version - commands handled directly by component
+    },
+    removeListener: () => {
+      // Web version - no cleanup needed
+    }
   }
 
   private addSampleDocuments(): void {

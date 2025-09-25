@@ -13,7 +13,8 @@ const api: FileSystemAPI = {
   renameFile: (filePath: string, newPath: string) =>
     ipcRenderer.invoke('rename-file', filePath, newPath),
   contextMenu: {
-    show: (path?: string) => ipcRenderer.send('show-context-menu', path),
+    show: (context: import('../renderer/src/features/navigator').ContextMenuContext) =>
+      ipcRenderer.send('show-context-menu', context),
     onCommand: (cb: (cmd: string, ...args: unknown[]) => void) =>
       ipcRenderer.on('context-menu-command', (_e, cmd, ...args) => cb(cmd, ...args)),
     removeListener: () => ipcRenderer.removeAllListeners('context-menu-command')

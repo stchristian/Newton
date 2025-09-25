@@ -4,12 +4,16 @@ import { useNavigator } from '../hooks/useNavigator'
 import { useWorkspace } from '@renderer/shared/hooks/useWorkspace'
 import { TreeItem as TreeItemData } from '../stores/navigator-store'
 import { TreeItem } from './TreeItem'
+import type { ContextMenuContext } from '../types/context-menu'
 
-const TreeView = () => {
+interface TreeViewProps {
+  onItemContextMenu?: (context: ContextMenuContext) => void
+}
+
+const TreeView = ({ onItemContextMenu }: TreeViewProps) => {
   const { expandedFolderPaths, treeItems } = useNavigatorStore()
   const {
     handleFolderExpand,
-    openContextMenu,
     handleCancelNewItem,
     handleSaveNewItem
   } = useNavigator()
@@ -23,6 +27,10 @@ const TreeView = () => {
     },
     [openNote]
   )
+
+  const handleContextMenu = useCallback((context: ContextMenuContext) => {
+    onItemContextMenu?.(context)
+  }, [onItemContextMenu])
 
   const renderTreeItem = (item: TreeItemData, level: number = 0) => {
     const isExpanded = expandedFolderPaths.has(item.path)
@@ -40,7 +48,7 @@ const TreeView = () => {
         draft={item.draft ?? false}
         onItemClick={handleItemClick}
         onFolderClick={handleFolderExpand}
-        onContextMenu={openContextMenu}
+        onContextMenu={handleContextMenu}
         onCancelDraft={handleCancelNewItem}
         onSaveDraft={handleSaveNewItem}
         renderChildren={(childrenToRender, childLevel) => (
