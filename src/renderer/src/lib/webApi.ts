@@ -78,9 +78,8 @@ class WebAPI implements FileSystemAPI {
     const doc: WorkspaceItem = {
       name: fileName,
       path: filePath,
-      content,
-      isFile: true,
-      isDirectory: false
+      type: 'note',
+      content
     }
 
     this.currentWorkspace?.items.push(doc)
@@ -156,8 +155,7 @@ Happy writing!`
       const doc: WorkspaceItem = {
         name: sample.name,
         path: `/workspace/${sample.name}`,
-        isFile: true,
-        isDirectory: false,
+        type: 'note',
         content: sample.content
       }
       this.currentWorkspace?.items.push(doc)
@@ -179,8 +177,7 @@ Happy writing!`
     this.currentWorkspace?.items.push({
       name,
       path: filePath,
-      isFile: false,
-      isDirectory: true
+      type: 'directory'
     })
     this.saveToStorage()
     return Promise.resolve(true)
@@ -205,6 +202,20 @@ Happy writing!`
   }
   onRequestSelectAll() {
     return () => {}
+  }
+
+  renameFile: (filePath: string, newPath: string) => Promise<boolean> = async (
+    filePath,
+    newPath
+  ) => {
+    const doc = this.currentWorkspace?.items.find((item) => item.path === filePath)
+    if (doc) {
+      doc.path = newPath
+      doc.name = newPath.split('/').pop() || doc.name
+      this.saveToStorage()
+      return true
+    }
+    return false
   }
 }
 
