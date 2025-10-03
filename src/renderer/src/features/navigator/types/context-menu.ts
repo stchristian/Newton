@@ -1,7 +1,11 @@
 // Navigator context menu types - single source of truth for navigator feature
 
 export type ContextMenuType = 'empty-area' | 'file' | 'folder'
-export type ContextMenuCommand = 'new-folder' | 'new-note' | 'rename' | 'delete'
+export type ContextMenuCommandType = 'new-folder' | 'new-note' | 'rename' | 'delete'
+export type ContextMenuCommandPayload = {
+  id: ContextMenuCommandType
+  itemPath?: string
+}
 
 export interface ContextMenuContext {
   type: ContextMenuType
@@ -10,7 +14,7 @@ export interface ContextMenuContext {
 }
 
 export interface ContextMenuItem {
-  id: ContextMenuCommand
+  id: ContextMenuCommandType
   label: string
   variant?: 'default' | 'destructive'
 }
@@ -21,11 +25,11 @@ export const CONTEXT_MENU_ITEMS: Record<ContextMenuType, ContextMenuItem[]> = {
     { id: 'new-folder', label: 'New Folder' },
     { id: 'new-note', label: 'New Note' }
   ],
-  'file': [
+  file: [
     { id: 'rename', label: 'Rename...' },
     { id: 'delete', label: 'Delete', variant: 'destructive' }
   ],
-  'folder': [
+  folder: [
     { id: 'rename', label: 'Rename...' },
     { id: 'delete', label: 'Delete', variant: 'destructive' }
   ]

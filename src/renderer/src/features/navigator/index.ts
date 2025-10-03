@@ -7,7 +7,7 @@ export type { FileSystemItem, FileCreationState } from '../storage/types/file-sy
 // Context Menu Types (for cross-layer access while maintaining navigator ownership)
 export type {
   ContextMenuType,
-  ContextMenuCommand,
+  ContextMenuCommandType as ContextMenuCommand,
   ContextMenuContext,
   ContextMenuItem
 } from './types/context-menu'

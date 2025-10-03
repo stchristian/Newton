@@ -7,7 +7,7 @@ export const Navigator = () => {
     <div className="flex flex-col h-full">
       <NavigatorToolbar />
       <ContextMenuProvider>
-        {(showContextMenu) => <TreeView onItemContextMenu={showContextMenu} />}
+        <TreeView></TreeView>
       </ContextMenuProvider>
     </div>
   )

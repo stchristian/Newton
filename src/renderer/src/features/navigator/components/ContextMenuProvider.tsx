@@ -1,36 +1,39 @@
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode, useEffect, useState, createContext, useCallback } from 'react'
+import { useContextMenu } from '../hooks/useContextMenu'
+import type { ContextMenuContext, ContextMenuCommandType } from '../types/context-menu'
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger
 } from '../../../components/ui'
-import { useContextMenu } from '../hooks/useContextMenu'
-import { useNavigator } from '../hooks/useNavigator'
-import type {
-  ContextMenuContext,
-  ContextMenuCommand
-} from '../types/context-menu'
 
 interface ContextMenuProviderProps {
-  children: ReactNode | ((showContextMenu: (context: ContextMenuContext) => void) => ReactNode)
-  onContextMenu?: (context: ContextMenuContext) => void
+  children: ReactNode
 }
 
-export const ContextMenuProvider = ({ children, onContextMenu }: ContextMenuProviderProps) => {
-  const { getMenuItems } = useContextMenu()
-  const { handleAddFolder, handleAddNote, handleRename, handleDelete } = useNavigator()
-  const [currentContext, setCurrentContext] = useState<ContextMenuContext | null>(null)
+// Context for providing showContextMenu function to children
+interface NavigatorContextMenuContextValue {
+  showContextMenu: (context: ContextMenuContext, event?: React.MouseEvent) => void
+}
+
+export const NavigatorContextMenuContext = createContext<NavigatorContextMenuContextValue | null>(
+  null
+)
+
+export const ContextMenuProvider = ({ children }: ContextMenuProviderProps) => {
+  const { getMenuItems, handleContextMenuCommand } = useContextMenu()
+  const [menuContext, setMenuContext] = useState<ContextMenuContext | null>(null)
 
   // Handle Electron context menu commands
   useEffect(() => {
-    const handleCommand = (cmd: string, ...args: unknown[]) => {
+    const handleMainProcessCommand = (cmd: string, ...args: unknown[]) => {
       const itemPath = args[0] as string | undefined
-      handleContextMenuCommand(cmd as ContextMenuCommand, itemPath)
+      handleContextMenuCommand({ id: cmd as ContextMenuCommandType, itemPath })
     }
 
     if (!window.WEB_VERSION) {
-      window.api.contextMenu.onCommand(handleCommand)
+      window.api.contextMenu.onCommand(handleMainProcessCommand)
     }
 
     return () => {
@@ -38,93 +41,77 @@ export const ContextMenuProvider = ({ children, onContextMenu }: ContextMenuProv
         window.api.contextMenu.removeListener()
       }
     }
-  }, [handleAddFolder, handleAddNote, handleRename, handleDelete])
+  }, [handleContextMenuCommand])
 
-  const handleContextMenuCommand = (command: ContextMenuCommand, itemPath?: string) => {
-    switch (command) {
-      case 'new-folder':
-        handleAddFolder(itemPath)
-        break
-      case 'new-note':
-        handleAddNote(itemPath)
-        break
-      case 'rename':
-        if (itemPath) handleRename(itemPath)
-        break
-      case 'delete':
-        if (itemPath) handleDelete(itemPath)
-        break
-    }
-  }
-
-  const showContextMenu = (context: ContextMenuContext) => {
-    setCurrentContext(context)
-    onContextMenu?.(context)
-
-    if (!window.WEB_VERSION) {
-      // Electron version - show native menu
-      window.api.contextMenu.show(context)
-    }
-    // Web version - will show shadcn context menu automatically
-  }
-
-  const handleWebContextMenuSelect = (command: ContextMenuCommand) => {
-    if (currentContext) {
-      handleContextMenuCommand(command, currentContext.itemPath)
-    }
-  }
+  const showContextMenu = useCallback(
+    (context: ContextMenuContext, event?: React.MouseEvent) => {
+      if (!window.WEB_VERSION) {
+        // Electron version - prevent default and show native menu
+        if (event) {
+          event.preventDefault()
+          event.stopPropagation()
+        }
+        window.api.contextMenu.show(context)
+      } else {
+        // Web version - update state but let event bubble to Radix trigger
+        setMenuContext(context)
+      }
+    },
+    []
+  )
 
   if (window.WEB_VERSION) {
     // Web version using shadcn components
     return (
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          <div
-            className="flex-1"
-            onContextMenu={(e) => {
-              // Determine context based on event target
-              const target = e.target as HTMLElement
-              const isEmpty = target.classList.contains('tree-view') || target.closest('.tree-view') === target
-
-              if (isEmpty) {
-                showContextMenu({ type: 'empty-area' })
-              }
-            }}
-          >
-            {typeof children === 'function' ? children(showContextMenu) : children}
-          </div>
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          {currentContext && getMenuItems(currentContext).map((item) => (
-            <ContextMenuItem
-              key={item.id}
-              onClick={() => handleWebContextMenuSelect(item.id)}
-              variant={item.variant}
+      <NavigatorContextMenuContext.Provider value={{ showContextMenu }}>
+        <ContextMenu
+          onOpenChange={(open) => {
+            if (!open) {
+              // Delay clearing context to avoid showing empty menu during close animation
+              setTimeout(() => setMenuContext(null), 200)
+            }
+          }}
+        >
+          <ContextMenuTrigger asChild>
+            <div
+              className="flex-1 flex flex-col"
+              onContextMenu={(e) => {
+                // Handle empty area clicks (when clicking directly on this div)
+                if (e.target === e.currentTarget) {
+                  showContextMenu({ type: 'empty-area' }, e)
+                }
+              }}
             >
-              {item.label}
-            </ContextMenuItem>
-          ))}
-        </ContextMenuContent>
-      </ContextMenu>
+              {children}
+            </div>
+          </ContextMenuTrigger>
+          {menuContext && (
+            <ContextMenuContent>
+              {getMenuItems(menuContext).map((item) => (
+                <ContextMenuItem
+                  key={item.id}
+                  onSelect={() => {
+                    handleContextMenuCommand({
+                      id: item.id,
+                      itemPath: menuContext.itemPath
+                    })
+                  }}
+                  variant={item.variant}
+                >
+                  {item.label}
+                </ContextMenuItem>
+              ))}
+            </ContextMenuContent>
+          )}
+        </ContextMenu>
+      </NavigatorContextMenuContext.Provider>
     )
   }
 
-  // Electron version - just a wrapper div that handles context menu events
+  // Electron version - provide context and handle native menus
   return (
-    <div
-      className="flex-1"
-      onContextMenu={(e) => {
-        e.preventDefault()
-        // Determine context based on event target
-        const target = e.target as HTMLElement
-        const isEmpty = target.classList.contains('tree-view') || target.closest('.tree-view') === target
-
-        if (isEmpty) {
-          showContextMenu({ type: 'empty-area' })
-        }
-      }}
-    >
-      {typeof children === 'function' ? children(showContextMenu) : children}
-    </div>
+    <NavigatorContextMenuContext.Provider value={{ showContextMenu }}>
+      <div className="flex-1 flex flex-col">{children}</div>
+    </NavigatorContextMenuContext.Provider>
   )
 }

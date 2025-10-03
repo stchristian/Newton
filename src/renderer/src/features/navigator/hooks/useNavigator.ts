@@ -35,13 +35,14 @@ export const useNavigator = () => {
     if (!newItem) return
 
     const parentPath = newItem.path.substring(0, newItem.path.lastIndexOf('/'))
-    const finalPath = `${parentPath}/${name}` + (newItem.type === 'note' ? '.md' : '')
 
     if (newItem.type === 'directory') {
+      const finalPath = `${parentPath}/${name}`
       await StorageService.createFolder(finalPath)
     } else if (newItem.type === 'note') {
-      console.log('Creating note at:', finalPath)
-      await StorageService.writeFile(finalPath, '')
+      const fileName = `${name}.md`
+      console.log('Creating note at:', `${parentPath}/${fileName}`)
+      await StorageService.createFile(parentPath, fileName, '')
     }
     saveNewItem(name)
   }

@@ -1,8 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useContext } from 'react'
 import { TreeItem as TreeItemData } from '../stores/navigator-store'
-import clsx from 'clsx'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import type { ContextMenuContext } from '../types/context-menu'
+import { NavigatorContextMenuContext } from './ContextMenuProvider'
 
 // Separate component for tree item to use hooks properly
 interface TreeItemProps {
@@ -14,7 +13,6 @@ interface TreeItemProps {
   draft: boolean
   onItemClick: (item: TreeItemData) => void
   onFolderClick: (item: TreeItemData) => void
-  onContextMenu?: (context: ContextMenuContext) => void
   onSaveDraft: (name: string) => void
   onCancelDraft: () => void
   renderChildren: (children: TreeItemData[], level: number) => React.ReactNode
@@ -29,12 +27,12 @@ export const TreeItem = ({
   draft,
   onItemClick,
   onFolderClick,
-  onContextMenu,
   onSaveDraft,
   onCancelDraft,
   renderChildren
 }: TreeItemProps) => {
   const editableRef = useRef<HTMLSpanElement>(null)
+  const contextMenuContext = useContext(NavigatorContextMenuContext)
 
   // Auto-focus and select text when renaming starts
   useEffect(() => {
@@ -75,12 +73,13 @@ export const TreeItem = ({
         style={{ paddingLeft: `${level * 16 + 8}px` }}
         onClick={handleItemClick}
         onContextMenu={(e) => {
-          e.preventDefault()
-          onContextMenu?.({
-            type: item.type === 'directory' ? 'folder' : 'file',
-            itemPath: item.path,
-            itemType: item.type === 'directory' ? 'directory' : 'file'
-          })
+          contextMenuContext?.showContextMenu(
+            {
+              type: item.type === 'directory' ? 'folder' : 'file',
+              itemPath: item.path
+            },
+            e
+          )
         }}
       >
         <span className="mr-2 flex items-center">
@@ -94,22 +93,27 @@ export const TreeItem = ({
             </>
           )}
         </span>
-        <span
-          ref={editableRef}
-          className={clsx('truncate text-sm', draft ? 'cursor-text ' : '')}
-          title={item.displayName}
-          contentEditable={draft}
-          onBlur={() => {
-            onCancelDraft()
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              handleSave()
-            }
-          }}
-        >
-          {!draft && item.displayName}
-        </span>
+        {draft ? (
+          <span
+            ref={editableRef}
+            className="truncate text-sm cursor-text"
+            title={item.displayName}
+            contentEditable={true}
+            onBlur={() => {
+              onCancelDraft()
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleSave()
+              }
+            }}
+            suppressContentEditableWarning={true}
+          />
+        ) : (
+          <span className="truncate text-sm" title={item.displayName}>
+            {item.displayName}
+          </span>
+        )}
       </div>
 
       {/* Render children if folder is expanded */}

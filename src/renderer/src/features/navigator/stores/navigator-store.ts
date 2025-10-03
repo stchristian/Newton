@@ -50,15 +50,16 @@ export const useNavigatorStore = create<NavigatorStore>((set) => ({
     set((state) => {
       if (!state.newItem) return {}
 
+      const displayName = state.newItem.type === 'note' ? `${name}.md` : name
       const parentPath = state.newItem.path.substring(0, state.newItem.path.lastIndexOf('/'))
-      const newPath = `${parentPath}/${name}` + (state.newItem.type === 'note' ? '.md' : '')
+      const newPath = `${parentPath}/${name}` + displayName
 
       return {
         newItem: null,
         treeItems: state.treeItems.map((item) =>
           item.draft
             ? {
-                displayName: name,
+                displayName: displayName,
                 type: item.type,
                 path: newPath,
                 draft: false
