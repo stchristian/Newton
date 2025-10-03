@@ -151,7 +151,7 @@ const MarkdownViewer = forwardRef<MarkdownViewerRef, MarkdownViewerProps>(
 
     // Handle global copy/paste shortcuts
     useEffect(() => {
-      if (!window.api) return
+      if (!window.editor || !window.clipboard) return
 
       const handleCopy = () => {
         if (editorViewRef.current) {
@@ -159,7 +159,7 @@ const MarkdownViewer = forwardRef<MarkdownViewerRef, MarkdownViewerProps>(
           const selection = view.state.selection
           if (!selection.main.empty) {
             const text = view.state.sliceDoc(selection.main.from, selection.main.to)
-            window.api.clipboard.writeText(text)
+            window.clipboard.writeText(text)
           }
         }
       }
@@ -170,7 +170,7 @@ const MarkdownViewer = forwardRef<MarkdownViewerRef, MarkdownViewerProps>(
           const selection = view.state.selection
           if (!selection.main.empty) {
             const text = view.state.sliceDoc(selection.main.from, selection.main.to)
-            window.api.clipboard.writeText(text)
+            window.clipboard.writeText(text)
             view.dispatch({
               changes: { from: selection.main.from, to: selection.main.to, insert: '' }
             })
@@ -204,10 +204,10 @@ const MarkdownViewer = forwardRef<MarkdownViewerRef, MarkdownViewerProps>(
 
       // Register event listeners
       const removeListeners = [
-        window.api.onRequestCopy(handleCopy),
-        window.api.onRequestCut(handleCut),
-        window.api.onPasteText(handlePaste),
-        window.api.onRequestSelectAll(handleSelectAll)
+        window.editor.onRequestCopy(handleCopy),
+        window.editor.onRequestCut(handleCut),
+        window.editor.onPasteText(handlePaste),
+        window.editor.onRequestSelectAll(handleSelectAll)
       ]
 
       // Cleanup

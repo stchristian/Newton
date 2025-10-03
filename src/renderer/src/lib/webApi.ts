@@ -1,4 +1,10 @@
-import { FileSystemAPI, FileSystemItem } from '../../../preload/types'
+import {
+  FileSystemAPI,
+  FileSystemItem,
+  ContextMenuAPI,
+  ClipboardAPI,
+  EditorAPI
+} from '../../../preload/types'
 
 interface WorkspaceItem extends FileSystemItem {
   content?: string
@@ -10,7 +16,8 @@ interface Workspace {
   items: WorkspaceItem[]
 }
 
-class WebAPI implements FileSystemAPI {
+// Web implementation of FileSystemAPI
+class WebFileSystem implements FileSystemAPI {
   private currentWorkspace: Workspace | null = null
 
   private loadFromStorage(): void {
@@ -55,7 +62,7 @@ class WebAPI implements FileSystemAPI {
 
   async readFile(filePath: string): Promise<string> {
     const doc = this.currentWorkspace?.items.find((item) => item.path === filePath)
-    if (doc) {
+    if (doc && doc.content !== undefined) {
       return doc.content
     }
     throw new Error(`File not found: ${filePath}`)
@@ -67,10 +74,8 @@ class WebAPI implements FileSystemAPI {
       doc.content = content
       this.saveToStorage()
       return true
-    } else {
-      throw new Error(`File not found: ${filePath}`)
-      return false
     }
+    throw new Error(`File not found: ${filePath}`)
   }
 
   async createFile(folderPath: string, fileName: string, content: string): Promise<string> {
@@ -87,17 +92,34 @@ class WebAPI implements FileSystemAPI {
     return filePath
   }
 
-  contextMenu = {
-    show: (context: import('../features/navigator').ContextMenuContext) => {
-      // Web version - will be handled by shadcn context menu
-      console.log('Context menu requested for', context)
-    },
-    onCommand: (cb: (cmd: string, ...args: unknown[]) => void) => {
-      // Web version - commands handled directly by component
-    },
-    removeListener: () => {
-      // Web version - no cleanup needed
+  async deleteFile(filePath: string): Promise<boolean> {
+    this.currentWorkspace!.items =
+      this.currentWorkspace!.items.filter((item) => item.path !== filePath) || []
+    this.saveToStorage()
+    return true
+  }
+
+  async createFolder(filePath: string): Promise<boolean> {
+    // In web version, we'll just create a new folder in the workspace
+    const name = filePath.split('/').pop() || 'New Folder'
+    this.currentWorkspace?.items.push({
+      name,
+      path: filePath,
+      type: 'directory'
+    })
+    this.saveToStorage()
+    return true
+  }
+
+  async renameFile(filePath: string, newPath: string): Promise<boolean> {
+    const doc = this.currentWorkspace?.items.find((item) => item.path === filePath)
+    if (doc) {
+      doc.path = newPath
+      doc.name = newPath.split('/').pop() || doc.name
+      this.saveToStorage()
+      return true
     }
+    return false
   }
 
   private addSampleDocuments(): void {
@@ -163,64 +185,60 @@ Happy writing!`
 
     this.saveToStorage()
   }
+}
 
-  deleteFile(filePath: string): Promise<boolean> {
-    this.currentWorkspace!.items =
-      this.currentWorkspace!.items.filter((item) => item.path !== filePath) || []
-    this.saveToStorage()
-    return Promise.resolve(true)
-  }
-
-  createFolder(filePath: string): Promise<boolean> {
-    // In web version, we'll just create a new folder in the workspace
-    const name = filePath.split('/').pop() || 'New Folder'
-    this.currentWorkspace?.items.push({
-      name,
-      path: filePath,
-      type: 'directory'
-    })
-    this.saveToStorage()
-    return Promise.resolve(true)
+// Web implementation of ContextMenuAPI
+class WebContextMenu implements ContextMenuAPI {
+  show(context: import('../features/navigator').ContextMenuContext): void {
+    // Web version - will be handled by shadcn context menu
+    console.log('Context menu requested for', context)
   }
 
-  clipboard = {
-    readText: () => Promise.resolve(navigator.clipboard.readText()),
-    writeText: (text: string) => {
-      navigator.clipboard.writeText(text)
-      return Promise.resolve(true)
-    }
+  onCommand(_cb: (cmd: string, ...args: unknown[]) => void): void {
+    // Web version - commands handled directly by component
   }
 
-  onRequestCopy() {
-    return () => {}
-  }
-  onRequestCut() {
-    return () => {}
-  }
-  onPasteText() {
-    return () => {}
-  }
-  onRequestSelectAll() {
-    return () => {}
-  }
-
-  renameFile: (filePath: string, newPath: string) => Promise<boolean> = async (
-    filePath,
-    newPath
-  ) => {
-    const doc = this.currentWorkspace?.items.find((item) => item.path === filePath)
-    if (doc) {
-      doc.path = newPath
-      doc.name = newPath.split('/').pop() || doc.name
-      this.saveToStorage()
-      return true
-    }
-    return false
+  removeListener(): void {
+    // Web version - no cleanup needed
   }
 }
 
-// Expose the API globally for web
-if (typeof window.api === 'undefined') {
-  window.api = new WebAPI()
+// Web implementation of ClipboardAPI
+class WebClipboard implements ClipboardAPI {
+  async readText(): Promise<string> {
+    return navigator.clipboard.readText()
+  }
+
+  async writeText(text: string): Promise<boolean> {
+    await navigator.clipboard.writeText(text)
+    return true
+  }
+}
+
+// Web implementation of EditorAPI
+class WebEditor implements EditorAPI {
+  onRequestCopy(_callback: () => void): () => void {
+    return () => {}
+  }
+
+  onRequestCut(_callback: () => void): () => void {
+    return () => {}
+  }
+
+  onPasteText(_callback: (text: string) => void): () => void {
+    return () => {}
+  }
+
+  onRequestSelectAll(_callback: () => void): () => void {
+    return () => {}
+  }
+}
+
+// Expose segregated APIs globally for web
+if (typeof window.fileSystem === 'undefined') {
+  window.fileSystem = new WebFileSystem()
+  window.contextMenu = new WebContextMenu()
+  window.clipboard = new WebClipboard()
+  window.editor = new WebEditor()
   window.WEB_VERSION = true
 }

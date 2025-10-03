@@ -1,9 +1,9 @@
-import type { FileSystemItem } from '../types/file-system'
+import type { FileSystemItem } from '../../../../../preload/types'
 
 export class StorageService {
   static async readDirectory(path: string): Promise<FileSystemItem[]> {
     try {
-      return await window.api.readDirectory(path)
+      return await window.fileSystem.readDirectory(path)
     } catch (error) {
       console.error('Error reading directory:', error)
       throw error
@@ -12,7 +12,7 @@ export class StorageService {
 
   static async readFile(path: string): Promise<string> {
     try {
-      return await window.api.readFile(path)
+      return await window.fileSystem.readFile(path)
     } catch (error) {
       console.error('Error reading file:', error)
       throw error
@@ -21,7 +21,7 @@ export class StorageService {
 
   static async writeFile(path: string, content: string): Promise<void> {
     try {
-      await window.api.writeFile(path, content)
+      await window.fileSystem.writeFile(path, content)
     } catch (error) {
       console.error('Error writing file:', error)
       throw error
@@ -30,7 +30,7 @@ export class StorageService {
 
   static async createFile(directory: string, fileName: string, content: string): Promise<string> {
     try {
-      return await window.api.createFile(directory, fileName, content)
+      return await window.fileSystem.createFile(directory, fileName, content)
     } catch (error) {
       console.error('Error creating file:', error)
       throw error
@@ -39,7 +39,7 @@ export class StorageService {
 
   static async createFolder(path: string): Promise<void> {
     try {
-      await window.api.createFolder(path)
+      await window.fileSystem.createFolder(path)
     } catch (error) {
       console.error('Error creating folder:', error)
       throw error
@@ -48,7 +48,7 @@ export class StorageService {
 
   static async deleteFile(path: string): Promise<void> {
     try {
-      await window.api.deleteFile(path)
+      await window.fileSystem.deleteFile(path)
     } catch (error) {
       console.error('Error deleting file:', error)
       throw error
@@ -57,7 +57,7 @@ export class StorageService {
 
   static async openFolder(): Promise<string | null> {
     try {
-      return await window.api.openFolder()
+      return await window.fileSystem.openFolder()
     } catch (error) {
       console.error('Error opening folder:', error)
       throw error
@@ -66,7 +66,7 @@ export class StorageService {
 
   static async renameFile(path: string, newPath: string): Promise<void> {
     try {
-      await window.api.renameFile(path, newPath)
+      await window.fileSystem.renameFile(path, newPath)
     } catch (error) {
       console.error('Error renaming file:', error)
       throw error

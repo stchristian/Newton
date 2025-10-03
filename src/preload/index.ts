@@ -1,8 +1,9 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import { FileSystemAPI } from './types'
+import { FileSystemAPI, ContextMenuAPI, ClipboardAPI, EditorAPI } from './types'
 
-const api: FileSystemAPI = {
+// File system operations API
+const fileSystem: FileSystemAPI = {
   openFolder: () => ipcRenderer.invoke('open-folder'),
   readDirectory: (folderPath: string) => ipcRenderer.invoke('read-directory', folderPath),
   readFile: (filePath: string) => ipcRenderer.invoke('read-file', filePath),
@@ -12,20 +13,27 @@ const api: FileSystemAPI = {
     ipcRenderer.invoke('create-file', folderPath, fileName, content),
   renameFile: (filePath: string, newPath: string) =>
     ipcRenderer.invoke('rename-file', filePath, newPath),
-  contextMenu: {
-    show: (context: import('../renderer/src/features/navigator').ContextMenuContext) =>
-      ipcRenderer.send('show-context-menu', context),
-    onCommand: (cb: (cmd: string, ...args: unknown[]) => void) =>
-      ipcRenderer.on('context-menu-command', (_e, cmd, ...args) => cb(cmd, ...args)),
-    removeListener: () => ipcRenderer.removeAllListeners('context-menu-command')
-  },
   createFolder: (filePath: string) => ipcRenderer.invoke('create-folder', filePath),
-  deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath),
-  clipboard: {
-    readText: () => ipcRenderer.invoke('get-clipboard-text'),
-    writeText: (text: string) => ipcRenderer.invoke('set-clipboard-text', text)
-  },
-  // Add new clipboard operations
+  deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath)
+}
+
+// Context menu API
+const contextMenu: ContextMenuAPI = {
+  show: (context: import('../renderer/src/features/navigator').ContextMenuContext) =>
+    ipcRenderer.send('show-context-menu', context),
+  onCommand: (cb: (cmd: string, ...args: unknown[]) => void) =>
+    ipcRenderer.on('context-menu-command', (_e, cmd, ...args) => cb(cmd, ...args)),
+  removeListener: () => ipcRenderer.removeAllListeners('context-menu-command')
+}
+
+// Clipboard operations API
+const clipboard: ClipboardAPI = {
+  readText: () => ipcRenderer.invoke('get-clipboard-text'),
+  writeText: (text: string) => ipcRenderer.invoke('set-clipboard-text', text)
+}
+
+// Editor event handlers API
+const editor: EditorAPI = {
   onRequestCopy: (callback: () => void) => {
     ipcRenderer.on('request-copy', callback)
     return () => ipcRenderer.removeListener('request-copy', callback)
@@ -51,7 +59,10 @@ const api: FileSystemAPI = {
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('api', api)
+    contextBridge.exposeInMainWorld('fileSystem', fileSystem)
+    contextBridge.exposeInMainWorld('contextMenu', contextMenu)
+    contextBridge.exposeInMainWorld('clipboard', clipboard)
+    contextBridge.exposeInMainWorld('editor', editor)
   } catch (error) {
     console.error(error)
   }
@@ -59,7 +70,13 @@ if (process.contextIsolated) {
   // @ts-ignore (define in dts)
   window.electron = electronAPI
   // @ts-ignore (define in dts)
-  window.api = api
+  window.fileSystem = fileSystem
+  // @ts-ignore (define in dts)
+  window.contextMenu = contextMenu
+  // @ts-ignore (define in dts)
+  window.clipboard = clipboard
+  // @ts-ignore (define in dts)
+  window.editor = editor
   // @ts-ignore (define in dts)
   window.WEB_VERSION = false
 }

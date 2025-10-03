@@ -33,12 +33,12 @@ export const ContextMenuProvider = ({ children }: ContextMenuProviderProps) => {
     }
 
     if (!window.WEB_VERSION) {
-      window.api.contextMenu.onCommand(handleMainProcessCommand)
+      window.contextMenu.onCommand(handleMainProcessCommand)
     }
 
     return () => {
       if (!window.WEB_VERSION) {
-        window.api.contextMenu.removeListener()
+        window.contextMenu.removeListener()
       }
     }
   }, [handleContextMenuCommand])
@@ -51,7 +51,7 @@ export const ContextMenuProvider = ({ children }: ContextMenuProviderProps) => {
           event.preventDefault()
           event.stopPropagation()
         }
-        window.api.contextMenu.show(context)
+        window.contextMenu.show(context)
       } else {
         // Web version - update state but let event bubble to Radix trigger
         setMenuContext(context)
