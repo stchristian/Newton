@@ -7,6 +7,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger
 } from '../../../components/ui'
+import { ContextMenuSeparator } from '@/components/ui/context-menu'
 
 interface ContextMenuProviderProps {
   children: ReactNode
@@ -43,22 +44,19 @@ export const ContextMenuProvider = ({ children }: ContextMenuProviderProps) => {
     }
   }, [handleContextMenuCommand])
 
-  const showContextMenu = useCallback(
-    (context: ContextMenuContext, event?: React.MouseEvent) => {
-      if (!window.WEB_VERSION) {
-        // Electron version - prevent default and show native menu
-        if (event) {
-          event.preventDefault()
-          event.stopPropagation()
-        }
-        window.contextMenu.show(context)
-      } else {
-        // Web version - update state but let event bubble to Radix trigger
-        setMenuContext(context)
+  const showContextMenu = useCallback((context: ContextMenuContext, event?: React.MouseEvent) => {
+    if (!window.WEB_VERSION) {
+      // Electron version - prevent default and show native menu
+      if (event) {
+        event.preventDefault()
+        event.stopPropagation()
       }
-    },
-    []
-  )
+      window.contextMenu.show(context)
+    } else {
+      // Web version - update state but let event bubble to Radix trigger
+      setMenuContext(context)
+    }
+  }, [])
 
   if (window.WEB_VERSION) {
     // Web version using shadcn components
@@ -87,20 +85,24 @@ export const ContextMenuProvider = ({ children }: ContextMenuProviderProps) => {
           </ContextMenuTrigger>
           {menuContext && (
             <ContextMenuContent>
-              {getMenuItems(menuContext).map((item) => (
-                <ContextMenuItem
-                  key={item.id}
-                  onSelect={() => {
-                    handleContextMenuCommand({
-                      id: item.id,
-                      itemPath: menuContext.itemPath
-                    })
-                  }}
-                  variant={item.variant}
-                >
-                  {item.label}
-                </ContextMenuItem>
-              ))}
+              {getMenuItems(menuContext).map((item, index) =>
+                item.type === 'separator' ? (
+                  <ContextMenuSeparator key={`sep-${index}`} />
+                ) : (
+                  <ContextMenuItem
+                    key={item.id}
+                    onSelect={() => {
+                      handleContextMenuCommand({
+                        id: item.id!,
+                        itemPath: menuContext.itemPath
+                      })
+                    }}
+                    variant={item.variant}
+                  >
+                    {item.label}
+                  </ContextMenuItem>
+                )
+              )}
             </ContextMenuContent>
           )}
         </ContextMenu>

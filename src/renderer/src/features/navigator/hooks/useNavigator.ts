@@ -3,16 +3,26 @@ import { TreeItem, useNavigatorStore } from '../stores/navigator-store'
 import { StorageService } from '@renderer/features/storage'
 
 export const useNavigator = () => {
-  const { setNewItem, toggleFolderExpansion, newItem, cancelNewItem, saveNewItem } =
-    useNavigatorStore()
+  const {
+    setNewItem,
+    toggleFolderExpansion,
+    newItem,
+    cancelNewItem,
+    saveNewItem,
+    expandedFolderPaths,
+    treeItems
+  } = useNavigatorStore()
   const { workspaceFolder } = useWorkspace()
 
-  const handleAddFolder = (path: string = workspaceFolder!) => {
-    setNewItem('directory', path)
-  }
-
-  const handleAddNote = (path: string = workspaceFolder!) => {
-    setNewItem('note', path)
+  const getTreeItemByPath = (path: string, items: TreeItem[]): TreeItem | null => {
+    for (const item of items) {
+      if (item.path === path) return item
+      if (item.type === 'directory' && item.children) {
+        const found = getTreeItemByPath(path, item.children)
+        if (found) return found
+      }
+    }
+    return null
   }
 
   const handleFolderExpand = async (treeItem: TreeItem) => {
@@ -25,6 +35,24 @@ export const useNavigator = () => {
       }))
     }
     toggleFolderExpansion(treeItem)
+  }
+
+  const handleAddFolder = (path: string = workspaceFolder!) => {
+    if (!expandedFolderPaths.has(path)) {
+      // Auto-expand if not already
+      const item = getTreeItemByPath(path, treeItems)
+      handleFolderExpand(item as TreeItem)
+    }
+    setNewItem('directory', path)
+  }
+
+  const handleAddNote = (path: string = workspaceFolder!) => {
+    if (!expandedFolderPaths.has(path)) {
+      // Auto-expand if not already
+      const item = getTreeItemByPath(path, treeItems)
+      handleFolderExpand(item as TreeItem)
+    }
+    setNewItem('note', path)
   }
 
   const openContextMenu = (itemPath: string) => {
@@ -60,12 +88,12 @@ export const useNavigator = () => {
     // 3. Calling StorageService.renameFile or similar
   }
 
-  const handleDelete = (itemPath: string) => {
+  const handleDelete = async (itemPath: string) => {
     console.log('Delete operation for:', itemPath)
     // TODO: Implement delete functionality
     // This would involve:
     // 1. Showing confirmation dialog
-    // 2. Calling StorageService.deleteFile
+    // 2. Calling StorageService.deleteFile or similar. If folder, handle recursive deletion
     // 3. Updating the tree state
   }
 

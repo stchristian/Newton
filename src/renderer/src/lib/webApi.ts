@@ -55,7 +55,11 @@ class WebFileSystem implements FileSystemAPI {
   async readDirectory(folderPath: string): Promise<FileSystemItem[]> {
     return (
       this.currentWorkspace?.items.filter(
-        (item) => item.path.startsWith(folderPath) && item.path !== folderPath
+        // Return only items directly under the folderPath, exluding nested items
+        (item) =>
+          item.path.startsWith(folderPath) &&
+          item.path !== folderPath &&
+          item.path.substring(folderPath.length + 1).indexOf('/') === -1
       ) || []
     )
   }

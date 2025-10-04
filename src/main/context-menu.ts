@@ -13,6 +13,12 @@ ipcMain.on('show-context-menu', (event, context: ContextMenuContext) => {
       template.push({ type: 'separator' })
     }
 
+    if (item.type === 'separator') {
+      template.push({ type: 'separator' })
+      return
+    }
+
+    if (!item.id) return // Skip items without id
     template.push({
       label: item.label,
       click: () => event.sender.send('context-menu-command', item.id, context.itemPath)

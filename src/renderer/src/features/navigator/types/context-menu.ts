@@ -14,22 +14,26 @@ export interface ContextMenuContext {
 }
 
 export interface ContextMenuItem {
-  id: ContextMenuCommandType
-  label: string
+  id?: ContextMenuCommandType
+  type?: 'separator'
+  label?: string
   variant?: 'default' | 'destructive'
 }
 
 // Shared menu definitions to avoid duplication across layers
 export const CONTEXT_MENU_ITEMS: Record<ContextMenuType, ContextMenuItem[]> = {
   'empty-area': [
-    { id: 'new-folder', label: 'New Folder' },
-    { id: 'new-note', label: 'New Note' }
+    { id: 'new-folder', label: 'New folder' },
+    { id: 'new-note', label: 'New note' }
   ],
   file: [
     { id: 'rename', label: 'Rename...' },
     { id: 'delete', label: 'Delete', variant: 'destructive' }
   ],
   folder: [
+    { id: 'new-note', label: 'New note' },
+    { id: 'new-folder', label: 'New folder' },
+    { type: 'separator' },
     { id: 'rename', label: 'Rename...' },
     { id: 'delete', label: 'Delete', variant: 'destructive' }
   ]
