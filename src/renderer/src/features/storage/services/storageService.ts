@@ -73,6 +73,15 @@ export class StorageService {
     }
   }
 
+  static async deleteRecursively(path: string): Promise<void> {
+    try {
+      await window.fileSystem.deleteRecursively(path)
+    } catch (error) {
+      console.error('Error deleting recursively:', error)
+      throw error
+    }
+  }
+
   static isMarkdownFile(path: string): boolean {
     return /\.(md|mdx|markdown)$/i.test(path)
   }

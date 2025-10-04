@@ -6,9 +6,10 @@ export const useNavigator = () => {
   const {
     setNewItem,
     toggleFolderExpansion,
-    newItem,
     cancelNewItem,
     saveNewItem,
+    deleteRecursively,
+    newItem,
     expandedFolderPaths,
     treeItems
   } = useNavigatorStore()
@@ -89,12 +90,8 @@ export const useNavigator = () => {
   }
 
   const handleDelete = async (itemPath: string) => {
-    console.log('Delete operation for:', itemPath)
-    // TODO: Implement delete functionality
-    // This would involve:
-    // 1. Showing confirmation dialog
-    // 2. Calling StorageService.deleteFile or similar. If folder, handle recursive deletion
-    // 3. Updating the tree state
+    await StorageService.deleteRecursively(itemPath)
+    deleteRecursively(itemPath)
   }
 
   return {

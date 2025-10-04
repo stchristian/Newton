@@ -14,7 +14,8 @@ const fileSystem: FileSystemAPI = {
   renameFile: (filePath: string, newPath: string) =>
     ipcRenderer.invoke('rename-file', filePath, newPath),
   createFolder: (filePath: string) => ipcRenderer.invoke('create-folder', filePath),
-  deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath)
+  deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath),
+  deleteRecursively: (path: string) => ipcRenderer.invoke('delete-recursively', path)
 }
 
 // Context menu API

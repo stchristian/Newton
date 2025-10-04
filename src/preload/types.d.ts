@@ -11,6 +11,7 @@ export interface FileSystemAPI {
   readFile: (filePath: string) => Promise<string>
   writeFile: (filePath: string, content: string) => Promise<boolean>
   deleteFile: (folderPath: string) => Promise<boolean>
+  deleteRecursively: (path: string) => Promise<boolean>
   createFile: (folderPath: string, fileName: string, content: string) => Promise<string>
   createFolder: (folderPath: string) => Promise<boolean>
   renameFile: (filePath: string, newPath: string) => Promise<boolean>

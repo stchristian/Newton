@@ -103,6 +103,13 @@ class WebFileSystem implements FileSystemAPI {
     return true
   }
 
+  async deleteRecursively(path: string): Promise<boolean> {
+    this.currentWorkspace!.items =
+      this.currentWorkspace!.items.filter((item) => !item.path.startsWith(path)) || []
+    this.saveToStorage()
+    return true
+  }
+
   async createFolder(filePath: string): Promise<boolean> {
     // In web version, we'll just create a new folder in the workspace
     const name = filePath.split('/').pop() || 'New Folder'

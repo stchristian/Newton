@@ -21,6 +21,7 @@ interface NavigatorStore {
   setNewItem: (type: TreeItemType, parentPath: string) => void
   saveNewItem: (name: string) => void
   cancelNewItem: () => void
+  deleteRecursively: (path: string) => Promise<void>
 }
 
 export const useNavigatorStore = create<NavigatorStore>((set) => ({
@@ -42,6 +43,25 @@ export const useNavigatorStore = create<NavigatorStore>((set) => ({
     set((state) => ({
       newItem,
       treeItems: [...state.treeItems, newItem]
+    }))
+  },
+
+  deleteRecursively: async (path: string) => {
+    function removeChildren(items: TreeItem[], path: string): TreeItem[] {
+      return items
+        .filter((item) => !item.path.startsWith(path))
+        .map((item) =>
+          item.type === 'directory' && item.children
+            ? { ...item, children: removeChildren(item.children, path) }
+            : item
+        )
+    }
+
+    set((state) => ({
+      treeItems: removeChildren(state.treeItems, path),
+      expandedFolderPaths: new Set(
+        Array.from(state.expandedFolderPaths).filter((p) => !p.startsWith(path))
+      )
     }))
   },
 
