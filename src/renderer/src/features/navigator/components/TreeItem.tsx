@@ -95,6 +95,7 @@ export const TreeItem = ({
         </span>
         {draft ? (
           <span
+            autoFocus
             ref={editableRef}
             className="truncate text-sm cursor-text"
             title={item.displayName}
