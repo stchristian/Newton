@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react'
-import { EditorState } from '@codemirror/state'
-import { EditorView } from '@codemirror/view'
+import { EditorState, Compartment, RangeSetBuilder } from '@codemirror/state'
+import { EditorView, Decoration, DecorationSet, ViewPlugin, ViewUpdate } from '@codemirror/view'
 import { markdown as cmMarkdown } from '@codemirror/lang-markdown'
-import { syntaxHighlighting, HighlightStyle } from '@codemirror/language'
+import { syntaxHighlighting, HighlightStyle, syntaxTree } from '@codemirror/language'
 import { tags } from '@lezer/highlight'
+import { Pencil, BookOpen } from 'lucide-react'
+import { Button } from './ui'
 import { config } from './EditorConfig'
 import { StorageService } from '@renderer/features/storage'
 
@@ -21,35 +23,124 @@ export interface MarkdownViewerRef {
 
 // Live preview styles similar to Obsidian: larger, bold headings; bold/italic emphasis
 const livePreviewStyle = HighlightStyle.define([
-  { tag: tags.heading1, fontSize: '1.75rem', fontWeight: '700' },
-  { tag: tags.heading2, fontSize: '1.5rem', fontWeight: '700' },
-  { tag: tags.heading3, fontSize: '1.25rem', fontWeight: '700' },
-  { tag: tags.heading4, fontSize: '1.15rem', fontWeight: '700' },
-  { tag: tags.heading5, fontSize: '1.05rem', fontWeight: '700' },
-  { tag: tags.heading6, fontSize: '1rem', fontWeight: '700' },
-  { tag: tags.strong, fontWeight: '700' },
-  { tag: tags.emphasis, fontStyle: 'italic' },
-  { tag: tags.link, textDecoration: 'underline' }
+  { tag: tags.heading1, class: 'text-4xl font-bold' },
+  { tag: tags.heading2, class: 'text-3xl font-bold' },
+  { tag: tags.heading3, class: 'text-2xl font-bold' },
+  { tag: tags.heading4, class: 'text-xl font-bold' },
+  { tag: tags.heading5, class: 'text-lg font-bold' },
+  { tag: tags.heading6, class: 'text-base font-bold' },
+  { tag: tags.strong, class: 'font-bold' },
+  { tag: tags.emphasis, class: 'italic' },
+  { tag: tags.link, class: 'underline' },
+  { tag: tags.quote, class: 'pl-2 border-l-2' }
 ])
 
-// const hideFormatting = ViewPlugin.fromClass(
-//   class {
-//     decorations: DecorationSet
-//     constructor(view: EditorView) {
-//       this.decorations = buildFormattingDecorations(view)
-//     }
-//     update(update: ViewUpdate): void {
-//       if (update.docChanged || update.viewportChanged) {
-//         this.decorations = buildFormattingDecorations(update.view)
-//     }
-//   },
-//   { decorations: (v: { decorations: DecorationSet }) => v.decorations }
-// )
+// CSS class to hide markdown syntax
+const hiddenSyntax = Decoration.mark({
+  class: 'cm-hidden-syntax',
+  attributes: { style: 'opacity: 0; position: absolute; pointer-events: none;' }
+})
+
+// Build decorations to hide markdown formatting in read mode
+function buildFormattingDecorations(view: EditorView): DecorationSet {
+  const builder = new RangeSetBuilder<Decoration>()
+
+  for (const { from, to } of view.visibleRanges) {
+    syntaxTree(view.state).iterate({
+      from,
+      to,
+      enter: (node) => {
+        const nodeName = node.name
+
+        // Hide heading marks (##, ###, etc.)
+        if (nodeName === 'HeaderMark') {
+          builder.add(node.from, node.to, hiddenSyntax)
+        }
+        // Hide emphasis/strong marks (*, **, _, __)
+        else if (nodeName === 'EmphasisMark' || nodeName === 'StrongMark') {
+          builder.add(node.from, node.to, hiddenSyntax)
+        }
+        // Hide link syntax but keep link text visible
+        else if (nodeName === 'LinkMark' || nodeName === 'URL') {
+          builder.add(node.from, node.to, hiddenSyntax)
+        }
+        // Hide code marks (`, ```)
+        else if (nodeName === 'CodeMark' || nodeName === 'CodeInfo') {
+          builder.add(node.from, node.to, hiddenSyntax)
+        }
+        // Hide list marks (-, *, +, 1., etc.)
+        else if (nodeName === 'ListMark') {
+          builder.add(node.from, node.to, hiddenSyntax)
+        }
+        // Hide quote marks (>)
+        else if (nodeName === 'QuoteMark') {
+          builder.add(node.from, node.to, hiddenSyntax)
+        }
+      }
+    })
+  }
+
+  return builder.finish()
+}
+
+// ViewPlugin to hide markdown formatting
+const hideFormattingPlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet
+    constructor(view: EditorView) {
+      this.decorations = buildFormattingDecorations(view)
+    }
+    update(update: ViewUpdate): void {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = buildFormattingDecorations(update.view)
+      }
+    }
+  },
+  { decorations: (v) => v.decorations }
+)
+
+// Compartments for dynamic reconfiguration
+const editableCompartment = new Compartment()
+const hideFormattingCompartment = new Compartment()
 
 const MarkdownViewer = forwardRef<MarkdownViewerRef, MarkdownViewerProps>(
   ({ value, fileName, filePath, onSave, autoSaveDelay = 2000 }, ref) => {
     const [isSaving, setIsSaving] = useState(false)
     const [lastSaved, setLastSaved] = useState<Date | null>(null)
+
+    const [editMode, setEditMode] = useState(true)
+
+    // Toggle edit mode with Cmd/Ctrl + E
+    useEffect(() => {
+      const keyDownHandler = (ev: KeyboardEvent) => {
+        if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'e') {
+          ev.preventDefault()
+          setEditMode((prev) => !prev)
+        }
+      }
+
+      window.addEventListener('keydown', keyDownHandler)
+      return () => window.removeEventListener('keydown', keyDownHandler)
+    }, [])
+
+    // Reconfigure editor when edit mode changes
+    useEffect(() => {
+      if (!editorViewRef.current) return
+
+      editorViewRef.current.dispatch({
+        effects: [
+          editableCompartment.reconfigure(EditorView.editable.of(editMode)),
+          hideFormattingCompartment.reconfigure(editMode ? [] : hideFormattingPlugin)
+        ]
+      })
+
+      // Focus/blur based on mode
+      if (editMode) {
+        editorViewRef.current.focus()
+      } else {
+        editorViewRef.current.contentDOM.blur()
+      }
+    }, [editMode])
 
     const editorContainerRef = useRef<HTMLDivElement | null>(null)
     const editorViewRef = useRef<EditorView | null>(null)
@@ -110,7 +201,8 @@ const MarkdownViewer = forwardRef<MarkdownViewerRef, MarkdownViewerProps>(
             cmMarkdown(),
             EditorView.lineWrapping,
             syntaxHighlighting(livePreviewStyle),
-            // hideFormatting,
+            editableCompartment.of(EditorView.editable.of(editMode)),
+            hideFormattingCompartment.of(editMode ? [] : hideFormattingPlugin),
             EditorView.updateListener.of((update) => {
               if (update.docChanged) {
                 const nextValue = update.state.doc.toString()
@@ -218,12 +310,18 @@ const MarkdownViewer = forwardRef<MarkdownViewerRef, MarkdownViewerProps>(
 
     return (
       <div className="flex-1 flex flex-col">
-        {/* File name display */}
-        {fileName && (
-          <div className="text-center py-2 border-b border-gray-200 bg-gray-50">
-            <span className="text-sm text-gray-600 font-medium">{fileName}</span>
-          </div>
-        )}
+        {/* Header: File name + Mode toggle */}
+        <div className="flex justify-between items-center py-2 px-4 border-b border-gray-200 bg-gray-50">
+          <span className="text-sm text-gray-600 font-medium">{fileName || 'Untitled'}</span>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => setEditMode((prev) => !prev)}
+            title={`${editMode ? 'Read' : 'Edit'} mode (Cmd/Ctrl+E)`}
+          >
+            {editMode ? <BookOpen /> : <Pencil />}
+          </Button>
+        </div>
         <div
           className="flex flex-col w-3xl mx-auto flex-1"
           ref={editorContainerRef}
