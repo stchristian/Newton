@@ -4,12 +4,14 @@ import { StorageService } from '@renderer/features/storage'
 
 export const useNavigator = () => {
   const {
-    setNewItem,
+    setDraftItem,
+    setRenameItem,
     toggleFolderExpansion,
-    cancelNewItem,
-    saveNewItem,
+    cancelDraftItem,
+    saveDraftItem,
     deleteRecursively,
-    newItem,
+    draftItem,
+    draftMode,
     expandedFolderPaths,
     treeItems
   } = useNavigatorStore()
@@ -44,7 +46,7 @@ export const useNavigator = () => {
       const item = getTreeItemByPath(path, treeItems)
       handleFolderExpand(item as TreeItem)
     }
-    setNewItem('directory', path)
+    setDraftItem('directory', path)
   }
 
   const handleAddNote = (path: string = workspaceFolder!) => {
@@ -53,40 +55,57 @@ export const useNavigator = () => {
       const item = getTreeItemByPath(path, treeItems)
       handleFolderExpand(item as TreeItem)
     }
-    setNewItem('note', path)
+    setDraftItem('note', path)
   }
 
   const openContextMenu = (itemPath: string) => {
     console.log('Context menu:', itemPath)
   }
 
-  const handleSaveNewItem = async (name: string) => {
-    if (!newItem) return
+  const handleSaveDraft = async (name: string) => {
+    if (!draftItem || !draftMode) return
 
-    const parentPath = newItem.path.substring(0, newItem.path.lastIndexOf('/'))
+    if (draftMode === 'add') {
+      // Adding new item
+      const parentPath = draftItem.path.substring(0, draftItem.path.lastIndexOf('/'))
 
-    if (newItem.type === 'directory') {
-      const finalPath = `${parentPath}/${name}`
-      await StorageService.createFolder(finalPath)
-    } else if (newItem.type === 'note') {
-      const fileName = `${name}.md`
-      console.log('Creating note at:', `${parentPath}/${fileName}`)
-      await StorageService.createFile(parentPath, fileName, '')
+      if (draftItem.type === 'directory') {
+        const finalPath = `${parentPath}/${name}`
+        await StorageService.createFolder(finalPath)
+      } else if (draftItem.type === 'note') {
+        const fileName = `${name}.md`
+        await StorageService.createFile(parentPath, fileName, '')
+      }
+    } else if (draftMode === 'rename') {
+      // Renaming existing item
+      const originalPath = draftItem.path
+      const parentPath = originalPath.substring(0, originalPath.lastIndexOf('/'))
+      const displayName = draftItem.type === 'note' ? `${name}.md` : name
+      const newPath = `${parentPath}/${displayName}`
+
+      await StorageService.renameFile(originalPath, newPath)
     }
-    saveNewItem(name)
+
+    saveDraftItem(name)
   }
 
-  const handleCancelNewItem = () => {
-    cancelNewItem()
+  const handleCancelDraft = () => {
+    cancelDraftItem()
   }
 
   const handleRename = (itemPath: string) => {
-    console.log('Rename operation for:', itemPath)
-    // TODO: Implement rename functionality
-    // This would involve:
-    // 1. Setting the item to editing mode
-    // 2. Allowing user to enter new name
-    // 3. Calling StorageService.renameFile or similar
+    // Get parent path and check if parent folder needs to be expanded
+    const parentPath = itemPath.substring(0, itemPath.lastIndexOf('/'))
+
+    if (parentPath && !expandedFolderPaths.has(parentPath)) {
+      // Auto-expand parent if not already
+      const item = getTreeItemByPath(parentPath, treeItems)
+      if (item) {
+        handleFolderExpand(item as TreeItem)
+      }
+    }
+
+    setRenameItem(itemPath)
   }
 
   const handleDelete = async (itemPath: string) => {
@@ -98,11 +117,11 @@ export const useNavigator = () => {
     handleAddFolder,
     handleAddNote,
     handleFolderExpand,
-    handleCancelNewItem,
-    handleSaveNewItem,
+    handleCancelDraft,
+    handleSaveDraft,
     handleRename,
     handleDelete,
     openContextMenu,
-    newItem
+    draftItem
   }
 }

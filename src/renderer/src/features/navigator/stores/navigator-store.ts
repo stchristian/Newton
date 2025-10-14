@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 type TreeItemType = 'note' | 'directory'
+type DraftMode = 'add' | 'rename'
 
 export interface TreeItem {
   displayName: string
@@ -14,13 +15,15 @@ interface NavigatorStore {
   treeItems: TreeItem[]
   expandedFolderPaths: Set<string>
 
-  newItem: TreeItem | null
+  draftItem: TreeItem | null
+  draftMode: DraftMode | null
 
   toggleFolderExpansion: (treeItem: TreeItem) => Promise<void>
   initializeNavigator: (treeItems: TreeItem[]) => void
-  setNewItem: (type: TreeItemType, parentPath: string) => void
-  saveNewItem: (name: string) => void
-  cancelNewItem: () => void
+  setDraftItem: (type: TreeItemType, parentPath: string) => void
+  setRenameItem: (path: string) => void
+  saveDraftItem: (name: string) => void
+  cancelDraftItem: () => void
   deleteRecursively: (path: string) => Promise<void>
 }
 
@@ -28,12 +31,13 @@ export const useNavigatorStore = create<NavigatorStore>((set) => ({
   treeItems: [],
   expandedFolderPaths: new Set(),
 
-  newItem: null,
+  draftItem: null,
+  draftMode: null,
 
-  setNewItem: (type: TreeItemType, parentPath: string) => {
+  setDraftItem: (type: TreeItemType, parentPath: string) => {
     const name = type === 'note' ? 'New note' : 'New folder'
 
-    const newItem = {
+    const draftItem = {
       displayName: name,
       type,
       path: `${parentPath}/${name}` + (type === 'note' ? '.md' : ''),
@@ -41,9 +45,47 @@ export const useNavigatorStore = create<NavigatorStore>((set) => ({
     }
 
     set((state) => ({
-      newItem,
-      treeItems: [...state.treeItems, newItem]
+      draftItem,
+      draftMode: 'add',
+      treeItems: [...state.treeItems, draftItem]
     }))
+  },
+
+  setRenameItem: (path: string) => {
+    set((state) => {
+      const markItemAsDraft = (items: TreeItem[]): TreeItem[] => {
+        return items.map((item) => {
+          if (item.path === path) {
+            return { ...item, draft: true }
+          }
+          if (item.type === 'directory' && item.children) {
+            return { ...item, children: markItemAsDraft(item.children) }
+          }
+          return item
+        })
+      }
+
+      // Find the item to rename
+      const findItem = (items: TreeItem[]): TreeItem | null => {
+        for (const item of items) {
+          if (item.path === path) return item
+          if (item.type === 'directory' && item.children) {
+            const found = findItem(item.children)
+            if (found) return found
+          }
+        }
+        return null
+      }
+
+      const itemToRename = findItem(state.treeItems)
+      if (!itemToRename) return state
+
+      return {
+        draftItem: { ...itemToRename, draft: true },
+        draftMode: 'rename',
+        treeItems: markItemAsDraft(state.treeItems)
+      }
+    })
   },
 
   deleteRecursively: async (path: string) => {
@@ -65,37 +107,109 @@ export const useNavigatorStore = create<NavigatorStore>((set) => ({
     }))
   },
 
-  // TODO: flatten the TreeItems as the draft can be anywhere.
-  saveNewItem: (name: string) => {
+  saveDraftItem: (name: string) => {
     set((state) => {
-      if (!state.newItem) return {}
+      if (!state.draftItem || !state.draftMode) return {}
 
-      const displayName = state.newItem.type === 'note' ? `${name}.md` : name
-      const parentPath = state.newItem.path.substring(0, state.newItem.path.lastIndexOf('/'))
-      const newPath = `${parentPath}/${name}` + displayName
+      if (state.draftMode === 'add') {
+        // Adding new item
+        const displayName = state.draftItem.type === 'note' ? `${name}.md` : name
+        const parentPath = state.draftItem.path.substring(0, state.draftItem.path.lastIndexOf('/'))
+        const newPath = `${parentPath}/${displayName}`
 
-      return {
-        newItem: null,
-        treeItems: state.treeItems.map((item) =>
-          item.draft
-            ? {
+        const updateDraftItems = (items: TreeItem[]): TreeItem[] => {
+          return items.map((item) =>
+            item.draft
+              ? {
+                  displayName: displayName,
+                  type: item.type,
+                  path: newPath,
+                  draft: false
+                }
+              : item.type === 'directory' && item.children
+                ? { ...item, children: updateDraftItems(item.children) }
+                : item
+          )
+        }
+
+        return {
+          draftItem: null,
+          draftMode: null,
+          treeItems: updateDraftItems(state.treeItems)
+        }
+      } else {
+        // Renaming existing item
+        const originalPath = state.draftItem.path
+        const displayName = state.draftItem.type === 'note' ? `${name}.md` : name
+        const parentPath = originalPath.substring(0, originalPath.lastIndexOf('/'))
+        const newPath = `${parentPath}/${displayName}`
+
+        const updateRenamedItems = (items: TreeItem[]): TreeItem[] => {
+          return items.map((item) => {
+            if (item.path === originalPath) {
+              return {
+                ...item,
                 displayName: displayName,
-                type: item.type,
                 path: newPath,
                 draft: false
               }
-            : item
-        )
+            }
+            if (item.type === 'directory' && item.children) {
+              return { ...item, children: updateRenamedItems(item.children) }
+            }
+            return item
+          })
+        }
+
+        return {
+          draftItem: null,
+          draftMode: null,
+          treeItems: updateRenamedItems(state.treeItems)
+        }
       }
     })
   },
 
-  // TODO: flatten the TreeItems as the draft can be anywhere.
-  cancelNewItem: () => {
-    set((state) => ({
-      newItem: null,
-      treeItems: state.treeItems.filter((item) => !item.draft)
-    }))
+  cancelDraftItem: () => {
+    set((state) => {
+      if (state.draftMode === 'add') {
+        // Remove the draft item if adding
+        const removeDraftItems = (items: TreeItem[]): TreeItem[] => {
+          return items
+            .filter((item) => !item.draft)
+            .map((item) =>
+              item.type === 'directory' && item.children
+                ? { ...item, children: removeDraftItems(item.children) }
+                : item
+            )
+        }
+
+        return {
+          draftItem: null,
+          draftMode: null,
+          treeItems: removeDraftItems(state.treeItems)
+        }
+      } else {
+        // Remove draft flag if renaming
+        const removeDraftFlag = (items: TreeItem[]): TreeItem[] => {
+          return items.map((item) => {
+            if (item.draft) {
+              return { ...item, draft: false }
+            }
+            if (item.type === 'directory' && item.children) {
+              return { ...item, children: removeDraftFlag(item.children) }
+            }
+            return item
+          })
+        }
+
+        return {
+          draftItem: null,
+          draftMode: null,
+          treeItems: removeDraftFlag(state.treeItems)
+        }
+      }
+    })
   },
 
   toggleFolderExpansion: async (treeItem: TreeItem) => {

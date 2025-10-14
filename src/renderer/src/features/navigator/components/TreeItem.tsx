@@ -37,17 +37,25 @@ export const TreeItem = ({
   // Auto-focus and select text when renaming starts
   useEffect(() => {
     if (draft && editableRef.current) {
-      editableRef.current.textContent = item.displayName
-      editableRef.current.focus()
-      // Select all text content
-      const range = document.createRange()
-      range.selectNodeContents(editableRef.current)
-      const selection = window.getSelection()
-      if (selection) {
-        selection.removeAllRanges()
-        selection.addRange(range)
-      }
+      // Small delay to ensure DOM is ready and context menu is closed
+      const timeoutId = setTimeout(() => {
+        if (editableRef.current) {
+          editableRef.current.textContent = item.displayName
+          editableRef.current.focus()
+          // Select all text content
+          const range = document.createRange()
+          range.selectNodeContents(editableRef.current)
+          const selection = window.getSelection()
+          if (selection) {
+            selection.removeAllRanges()
+            selection.addRange(range)
+          }
+        }
+      }, 10)
+
+      return () => clearTimeout(timeoutId)
     }
+    return undefined
   }, [draft, item.displayName])
 
   const handleSave = () => {
@@ -100,11 +108,15 @@ export const TreeItem = ({
             className="truncate text-sm cursor-text"
             title={item.displayName}
             contentEditable={true}
+            onClick={(e) => {
+              e.stopPropagation()
+            }}
             onBlur={() => {
               onCancelDraft()
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
+                e.preventDefault()
                 handleSave()
               }
             }}

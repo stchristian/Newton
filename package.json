@@ -18,7 +18,10 @@
     "make": "electron-forge make",
     "publish": "electron-forge publish",
     "build:web": "vite build --config vite.web.config.ts",
-    "dev:web": "vite --config vite.web.config.ts"
+    "dev:web": "vite --config vite.web.config.ts",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed"
   },
   "dependencies": {
     "@codemirror/lang-markdown": "^6.3.4",
@@ -49,6 +52,7 @@
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
     "@electron-toolkit/eslint-config-ts": "^3.0.0",
     "@electron-toolkit/tsconfig": "^1.0.1",
+    "@playwright/test": "^1.56.0",
     "@tailwindcss/postcss": "^4.1.13",
     "@types/node": "^22.16.5",
     "@types/react": "^19.1.8",

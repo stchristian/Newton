@@ -6,8 +6,8 @@ import { TreeItem as TreeItemData } from '../stores/navigator-store'
 import { TreeItem } from './TreeItem'
 
 const TreeView = () => {
-  const { expandedFolderPaths, treeItems } = useNavigatorStore()
-  const { handleFolderExpand, handleCancelNewItem, handleSaveNewItem } = useNavigator()
+  const { expandedFolderPaths, treeItems, draftMode } = useNavigatorStore()
+  const { handleFolderExpand, handleCancelDraft, handleSaveDraft } = useNavigator()
   const { openNote } = useWorkspace()
 
   const handleItemClick = useCallback(
@@ -35,8 +35,8 @@ const TreeView = () => {
         draft={item.draft ?? false}
         onItemClick={handleItemClick}
         onFolderClick={handleFolderExpand}
-        onCancelDraft={handleCancelNewItem}
-        onSaveDraft={handleSaveNewItem}
+        onCancelDraft={handleCancelDraft}
+        onSaveDraft={handleSaveDraft}
         renderChildren={(childrenToRender, childLevel) => (
           <div>
             {childrenToRender
@@ -60,7 +60,14 @@ const TreeView = () => {
       // Sort directories first, then files, both alphabetically
       if (a.type === 'directory' && b.type !== 'directory') return -1
       if (a.type !== 'directory' && b.type === 'directory') return 1
-      return a.draft ? 1 : a.displayName.localeCompare(b.displayName)
+
+      // Only push draft items to the end when adding new items, not when renaming
+      if (draftMode === 'add') {
+        if (a.draft && !b.draft) return 1
+        if (!a.draft && b.draft) return -1
+      }
+
+      return a.displayName.localeCompare(b.displayName)
     })
 
   return <div className="tree-view">{sortedItems.map((item) => renderTreeItem(item))}</div>
