@@ -127,6 +127,6 @@
 }
 
 .cm-editor {
-  @apply overflow-y-auto;
+  @apply overflow-y-auto grow;
 }
 
