@@ -92,3 +92,6 @@ typings/
 out/
 
 electron-forge*
+
+# Build output
+dist-web
