@@ -44,11 +44,50 @@ export const useNavigatorStore = create<NavigatorStore>((set) => ({
       draft: true
     }
 
-    set((state) => ({
-      draftItem,
-      draftMode: 'add',
-      treeItems: [...state.treeItems, draftItem]
-    }))
+    set((state) => {
+      // Helper function to recursively find parent and add draft item
+      const findAndAddDraft = (items: TreeItem[], targetParentPath: string): { items: TreeItem[]; found: boolean } => {
+        let found = false
+        const newItems = items.map((item) => {
+          // If this is the parent folder, add draft to its children
+          if (item.path === targetParentPath && item.type === 'directory') {
+            found = true
+            return {
+              ...item,
+              children: [...(item.children || []), draftItem]
+            }
+          }
+          // Recursively search in children
+          if (item.type === 'directory' && item.children) {
+            const result = findAndAddDraft(item.children, targetParentPath)
+            if (result.found) {
+              found = true
+              return {
+                ...item,
+                children: result.items
+              }
+            }
+          }
+          return item
+        })
+        return { items: newItems, found }
+      }
+
+      // Check if parentPath is the workspace root by checking if it matches any root item's parent
+      const isRootLevel = state.treeItems.length > 0 &&
+        state.treeItems.some(item => {
+          const itemParent = item.path.substring(0, item.path.lastIndexOf('/'))
+          return itemParent === parentPath
+        })
+
+      return {
+        draftItem,
+        draftMode: 'add',
+        treeItems: isRootLevel
+          ? [...state.treeItems, draftItem]
+          : findAndAddDraft(state.treeItems, parentPath).items
+      }
+    })
   },
 
   setRenameItem: (path: string) => {

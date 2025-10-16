@@ -40,20 +40,24 @@ export const useNavigator = () => {
     toggleFolderExpansion(treeItem)
   }
 
-  const handleAddFolder = (path: string = workspaceFolder!) => {
+  const handleAddFolder = async (path: string = workspaceFolder!) => {
     if (!expandedFolderPaths.has(path)) {
       // Auto-expand if not already
       const item = getTreeItemByPath(path, treeItems)
-      handleFolderExpand(item as TreeItem)
+      if (item) {
+        await handleFolderExpand(item as TreeItem)
+      }
     }
     setDraftItem('directory', path)
   }
 
-  const handleAddNote = (path: string = workspaceFolder!) => {
+  const handleAddNote = async (path: string = workspaceFolder!) => {
     if (!expandedFolderPaths.has(path)) {
       // Auto-expand if not already
       const item = getTreeItemByPath(path, treeItems)
-      handleFolderExpand(item as TreeItem)
+      if (item) {
+        await handleFolderExpand(item as TreeItem)
+      }
     }
     setDraftItem('note', path)
   }
