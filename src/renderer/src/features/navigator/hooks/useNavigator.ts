@@ -1,6 +1,7 @@
 import { useWorkspace } from '@renderer/shared/hooks/useWorkspace'
 import { TreeItem, useNavigatorStore } from '../stores/navigator-store'
 import { StorageService } from '@renderer/features/storage'
+import { useWorkspaceStore } from '@renderer/stores/workspace-store'
 
 export const useNavigator = () => {
   const {
@@ -16,6 +17,7 @@ export const useNavigator = () => {
     treeItems
   } = useNavigatorStore()
   const { workspaceFolder } = useWorkspace()
+  const { activeNote, setActiveNote } = useWorkspaceStore()
 
   const getTreeItemByPath = (path: string, items: TreeItem[]): TreeItem | null => {
     for (const item of items) {
@@ -115,6 +117,11 @@ export const useNavigator = () => {
   const handleDelete = async (itemPath: string) => {
     await StorageService.deleteRecursively(itemPath)
     deleteRecursively(itemPath)
+
+    // Clear active note if the deleted item is currently open
+    if (activeNote?.path === itemPath) {
+      setActiveNote(null)
+    }
   }
 
   return {
