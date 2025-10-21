@@ -35,19 +35,11 @@ export const useWorkspace = () => {
         return
       }
 
-      void (async () => {
-        try {
-          const content = await StorageService.readFile(path)
-          const name = StorageService.getFileName(path)
-          setActiveNote({
-            name,
-            markdownContent: content,
-            path
-          })
-        } catch (error) {
-          console.error('Failed to open markdown file:', error)
-        }
-      })()
+      const name = StorageService.getFileName(path)
+      setActiveNote({
+        name,
+        path
+      })
     },
     [setActiveNote]
   )
@@ -56,18 +48,6 @@ export const useWorkspace = () => {
     return activeNote?.path
   }, [activeNote])
 
-  const saveActiveNote = useCallback(
-    async (markdown: string) => {
-      if (!activeNote) return
-      await StorageService.writeFile(activeNote.path, markdown)
-      setActiveNote({
-        ...activeNote,
-        markdownContent: markdown
-      })
-    },
-    [activeNote, setActiveNote]
-  )
-
   return {
     hasOpenedWorkspace: !!workspaceFolder,
     workspaceFolder,
@@ -75,7 +55,6 @@ export const useWorkspace = () => {
     activeNote,
     setWorkspaceFolder,
     openWorkspace,
-    openNote,
-    saveActiveNote
+    openNote
   }
 }

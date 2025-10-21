@@ -3,7 +3,6 @@ import { create } from 'zustand'
 export interface Note {
   name: string
   path: string
-  markdownContent: string
 }
 
 interface WorkspaceStore {
