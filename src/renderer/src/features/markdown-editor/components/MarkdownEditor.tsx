@@ -11,6 +11,7 @@ export const MarkdownEditor = ({ fileName, filePath }: MarkdownEditorProps) => {
 
   // Load note content from file
   const { content } = useNoteContent(filePath)
+  console.log('Loaded content:', content)
 
   // Auto-save hook
   const { isSaving, lastSaved, save } = useAutoSave(filePath)
@@ -40,7 +41,13 @@ export const MarkdownEditor = ({ fileName, filePath }: MarkdownEditorProps) => {
         editMode={editorRef.current?.getEditMode() ?? true}
         onToggleMode={handleToggleMode}
       />
-      <EditorContent ref={editorRef} initialValue={content} onContentChange={handleContentChange} />
+      {/* Force remount EditorContent when filePath changes to reinitialize CodeMirror with new content */}
+      <EditorContent
+        key={filePath}
+        ref={editorRef}
+        initialValue={content}
+        onContentChange={handleContentChange}
+      />
       <EditorStatusBar isSaving={isSaving} lastSaved={lastSaved} filePath={filePath} />
     </div>
   )
